@@ -6,14 +6,12 @@ Packaged as a Blender Extension: metadata lives in
 
 import bpy
 
-from .operators import SILMOLD_OT_make_shell
 from .ui import SiliconeMoldingProperties, SILMOLD_PT_main
 
 # Registration order matters: SiliconeMoldingProperties must exist before the
 # Scene pointer that references it, and the panel draws the operator.
 _CLASSES = (
     SiliconeMoldingProperties,
-    SILMOLD_OT_make_shell,
     SILMOLD_PT_main,
 )
 
