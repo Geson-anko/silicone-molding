@@ -11,7 +11,7 @@ metadata:
 
 **2. background でも edit mode に入れる。** `bpy.context.view_layer.objects.active = obj` の後 `bpy.ops.object.mode_set(mode="EDIT")` が `{'FINISHED'}` を返し、`bpy.context.mode` は `"EDIT_MESH"` になる。**このとき選択は維持される**ので、「`poll` が OBJECT モードを要求する」という条件を空振りせずに検証できる。teardown では必ず OBJECT モードへ戻す（オブジェクト削除がモード依存で壊れるため）。
 
-**3. `hasattr(bpy.ops.<namespace>, "<op>")` は常に True。** `bpy.ops` は属性アクセス時に遅延でオブジェクトを作るため、存在しないオペレータ名でも True が返る（呼び出して初めて `AttributeError`）。**オペレータが登録されたことの検証は `"solidify" in dir(bpy.ops.silicone_molding)` で書く。** 同様に、Blender 5.x では `register_class` したクラスが `bpy.types.<CLASS_NAME>` として生えないので、その存在確認も使えない。削除前の `tests/blender/run.py` はこの `hasattr` を使っており、実質的に何も検証していなかった。
+**3. `hasattr(bpy.ops.<namespace>, "<op>")` は常に True。** `bpy.ops` は属性アクセス時に遅延でオブジェクトを作るため、存在しないオペレータ名でも True が返る（呼び出して初めて `AttributeError`）。**オペレータが登録されたことの検証は `"solidify" in dir(bpy.ops.silicone_molding)` で書く。** 削除前の `tests/blender/run.py` はこの `hasattr` を使っており、実質的に何も検証していなかった。（2026-08-14 訂正: `register_class` したクラスは `bpy.types` に生える。ただし Python のクラス名ではなく RNA 識別子で、オペレータは `SILICONE_MOLDING_OT_solidify`、パネルは `bl_idname` そのまま。詳細は [[knowledge-operator-rna-and-error-reports]] の 4）
 
 **4. 削除済みデータブロックへの再アクセスは segfault する。** `bpy.data.batch_remove((mesh,))` を同じ参照に 2 回呼ぶと Python レベルの例外ではなく Segmentation fault になり、pytest の出力ごと消える。fixture の後始末では、削除対象を「型名 + 名前」でユニーク化し、`users == 0` を確認して **1 回だけ** 渡す。
 
