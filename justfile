@@ -1,6 +1,7 @@
 set windows-shell := ["C:/Program Files/Git/bin/bash.exe", "-c"]
 
-# Auto-load `.env` (gitignored) for per-developer overrides such as BLENDER.
+# Auto-load `.env` (gitignored) for per-developer overrides such as BLENDER
+# and BLENDER_MCP_ADDON.
 # Existing shell environment variables take precedence (dotenv-override = false).
 set dotenv-load := true
 
@@ -37,8 +38,9 @@ format:
 test:
     uv run pytest -v --cov
 
-# Run pyright in an isolated env: fake-bpy-module and the real bpy wheel both
-# own the `bpy` package name, so they must never share an environment.
+# fake-bpy-module and the real bpy wheel both own the `bpy` package name, so
+# they must never share an environment -- hence the throwaway env.
+[doc("Run pyright strict over src/ in an isolated env")]
 type:
     uv run --isolated --with {{stubs}} --with pyright pyright {{src_dir}}
 
@@ -54,15 +56,26 @@ build: validate
     mkdir -p dist
     "$BLENDER" --command extension build --source-dir {{src_dir}} --output-dir dist
 
-# Install the built extension into the real Blender and run the integration
-# checks on it (tier 2). Requires a real Blender install, unlike `just test`.
-blender-test: build
+# Build and install the extension into the real Blender, enabled
+install: build
     "$BLENDER" --command extension install-file --repo user_default --enable dist/silicone_molding-$(just version).zip
+
+# Requires a real Blender install, unlike `just test`.
+[doc("Install, then run the tier-2 integration checks in a real Blender")]
+blender-test: install
     "$BLENDER" --background --python tests/blender/run.py
 
-# Print the version from blender_manifest.toml (single source of truth).
+# For trying the add-on by hand. Blender does not reload extension modules in
+# place, so re-run this after every code change. The BlenderMCP server is
+# started too, so Claude can inspect the same session while you work.
+# This blocks until Blender exits.
+[doc("Launch Blender with the add-on loaded, plus the MCP server")]
+dev: install
+    "$BLENDER" --python tools/launch_dev.py
+
 # `--no-project` keeps this off the dev env so the release workflow does not
 # have to download the 380MB bpy wheel just to read one field.
+[doc("Print the version from blender_manifest.toml (single source of truth)")]
 version:
     @uv run --no-project python -c "import tomllib,pathlib;print(tomllib.loads(pathlib.Path('{{src_dir}}/blender_manifest.toml').read_text())['version'])"
 

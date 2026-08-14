@@ -1,6 +1,6 @@
 ---
 name: blender-mcp
-description: "Blender MCP 経由で実 Blender を触りながら機能を確かめる手順。MCP のセットアップ (.mcp.json / BlenderMCP アドオン / Connect to Claude)、開発中の実機確認ループ (コード変更 → build → install → MCP で操作 → スクショ確認)、同時 1 インスタンス制約、自動テストとの使い分け。Triggers: 'blender mcp', 'Blender で確認', '実機で見たい', '実際に動かして', 'スクリーンショット', 'ビューポート', '目視で確認', 'UI を確認'."
+description: "Blender MCP 経由で実 Blender を触りながら機能を確かめる手順。just dev で GUI 起動 + MCP サーバー起動、MCP のセットアップ (.mcp.json / BlenderMCP アドオン)、コード変更のたびに just dev を再実行する必要、同時 1 インスタンス制約、自動テストとの使い分け。Triggers: 'just dev', 'blender mcp', 'Blender で確認', '実機で見たい', '実際に動かして', 'Blender を起動', 'スクリーンショット', 'ビューポート', '目視で確認', 'UI を確認'."
 version: 0.1.0
 ---
 
@@ -47,26 +47,25 @@ ______________________________________________________________________
 
 ### 3. 接続
 
-1. Blender を **GUI で** 起動する（MCP は background モードでは使えない）
-2. 3D ビューポートで **N** キー → **BlenderMCP** タブ
-3. **Connect to Claude** を押す
+`just dev` が Blender を GUI 起動し、BlenderMCP アドオンを有効化して MCP サーバーまで立ち上げる（[tools/launch_dev.py](../../../tools/launch_dev.py)）。**N パネルで Connect to Claude を手で押す必要はない。**
 
-接続後、Claude Code を再起動していれば `blender` MCP のツールが使えるようになる。
+MCP は background モードでは使えないので、`just dev` は必ず GUI で起動する。Claude Code 側は `.mcp.json` 反映のため一度再起動しておくこと。
 
 ______________________________________________________________________
 
 ## 開発中の実機確認ループ
 
-コードを変えてから実機で確かめるまでの最短経路:
-
 ```bash
-just build                                                    # dist/silicone_molding-<ver>.zip
-blender --command extension install-file --repo user_default --enable dist/silicone_molding-$(just version).zip
+just dev
 ```
 
-**その後 Blender を再起動する**。Blender は起動中に差し替えた extension のモジュールを再読込しないため、再起動しないと古いコードのまま動く。ここを飛ばして「変更が反映されない」と悩むのが最も多い失敗。
+これだけ。`build` → `install-file --enable` → GUI 起動 → MCP サーバー起動までを一息でやる。
 
-再起動したら **Connect to Claude** を押し直してから MCP で操作する。
+**コードを変えたら `just dev` を再実行する。** Blender は起動中に差し替えた extension のモジュールを再読込しないため、Blender を立ち上げ直さないと古いコードのまま動く。ここを飛ばして「変更が反映されない」と悩むのが最も多い失敗。
+
+`just dev` は Blender が終了するまでブロックするので、**Claude から実行するときは background で走らせる**（そうしないとセッションが固まるうえ、MCP サーバーも掴めない）。
+
+`just dev` はシーンにもウィンドウレイアウトにもユーザー設定にも触らない。素の Blender にアドオンが載っているだけの状態で立ち上がるので、パネルは **N** キーでサイドバーを開いて **Silicone Molding** タブを選ぶ。
 
 ### 確認の流れ
 
@@ -93,7 +92,8 @@ ______________________________________________________________________
 | 症状                           | 原因と対処                                                                                                          |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | MCP ツールが見えない           | Claude Code を再起動する。`.mcp.json` が repo ルートにあるか確認                                                    |
-| Connect to Claude が繋がらない | 他の MCP インスタンスが動いていないか確認。Blender を再起動して押し直す                                             |
-| コードを変えたのに反映されない | `just build` → `install-file` の後に **Blender を再起動**したか                                                     |
+| MCP サーバーが立たない         | `just dev` のログに `[just dev] WARNING:` が出ていないか。BlenderMCP アドオン未導入ならそこに指示が出る             |
+| ポートが埋まっている           | 他の Blender / MCP インスタンスが残っている。`lsof -nP -iTCP:9876 -sTCP:LISTEN` で確認して落とす                    |
+| コードを変えたのに反映されない | `just dev` を **再実行**したか（Blender は起動中に extension を再読込しない）                                       |
 | アドオンが有効にならない       | `blender --command extension list` で入っているか確認。`just validate` でマニフェストを検証                         |
 | 生成形状が tier 1 と違う       | Blender のバージョン差か、シーンのスケール / 変換行列の影響。`just blender-test` で golden と突き合わせて切り分ける |

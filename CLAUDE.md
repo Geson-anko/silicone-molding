@@ -110,19 +110,21 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 
 `just` レシピを使う（`uv run` をラップしているので venv が常に尊重される）:
 
-| レシピ              | 内容                                                                   |
-| ------------------- | ---------------------------------------------------------------------- |
-| `just setup`        | 開発環境のセットアップ（`uv venv` + `uv sync` + `pre-commit install`） |
-| `just format`       | pre-commit フックを実行                                                |
-| `just test`         | `bpy` wheel 上で pytest（tier 1）                                      |
-| `just type`         | 隔離環境で pyright strict                                              |
-| `just run`          | format → test → type                                                   |
-| `just validate`     | Extension マニフェストの検証                                           |
-| `just build`        | `dist/silicone_molding-<version>.zip` を生成                           |
-| `just blender-test` | 実 Blender に install して統合チェック（tier 2）                       |
-| `just fixtures`     | golden mesh の再生成                                                   |
-| `just version`      | `blender_manifest.toml` の version を出力                              |
-| `just clean`        | 生成物の削除                                                           |
+| レシピ              | 内容                                                                               |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `just setup`        | 開発環境のセットアップ（`uv venv` + `uv sync` + `pre-commit install`）             |
+| `just format`       | pre-commit フックを実行                                                            |
+| `just test`         | `bpy` wheel 上で pytest（tier 1）                                                  |
+| `just type`         | 隔離環境で pyright strict                                                          |
+| `just run`          | format → test → type                                                               |
+| `just validate`     | Extension マニフェストの検証                                                       |
+| `just build`        | `dist/silicone_molding-<version>.zip` を生成                                       |
+| `just install`      | build して実 Blender に install（有効化まで）                                      |
+| `just dev`          | install して Blender を GUI 起動。手で機能を触るためのもの。MCP サーバーも起動する |
+| `just blender-test` | install して統合チェック（tier 2）                                                 |
+| `just fixtures`     | golden mesh の再生成                                                               |
+| `just version`      | `blender_manifest.toml` の version を出力                                          |
+| `just clean`        | 生成物の削除                                                                       |
 
 実 Blender の場所は `BLENDER` 環境変数で上書きできる（`.env` でも可）。CI は setup-blender action が入れたものを指す。
 
