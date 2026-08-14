@@ -1,0 +1,109 @@
+# このプロジェクトは Blender Extension であり Python distribution ではない。
+# 配布物のメタデータ (name / version / license) は
+# `src/silicone_molding/blender_manifest.toml` が単一の真実であり、
+# この pyproject.toml は開発ツール (uv / pytest / pyright / ruff) の設定専用。
+[project]
+name = "silicone-molding-dev"
+version = "0"
+description = "Dev tooling environment for the Silicone Molding Blender extension"
+requires-python = "==3.13.*"
+
+[tool.uv]
+# 配布は Blender Extension zip で行うため、この repo 自体は install しない。
+package = false
+
+[dependency-groups]
+dev = [
+    "bpy>=5.1,<6",
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = "tests/"
+# src/ はインストールせず path 追加で import する (package = false のため)。
+pythonpath = ["src"]
+addopts = [
+    "--color=yes",
+    "--durations=0",
+    "--strict-markers",
+    "--doctest-modules",
+    # tests/blender/ は実 Blender の Python でのみ動く。`just blender-test` が担当。
+    "--ignore=tests/blender",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+log_cli = true
+log_level = "INFO"
+markers = [
+    "golden: compares generated geometry against a checked-in golden mesh under tests/fixtures/",
+    "api_contract: pins the public surface (bl_idname, property names, manifest fields) -- not a behaviour test",
+]
+
+[tool.coverage.run]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == __main__:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.pyright]
+pythonVersion = "3.13"
+strict = ["./src/"]
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.venv",
+    "tests/",
+    ".claude/worktrees/",
+]
+# bpy / bmesh / mathutils は fake-bpy-module が型を供給する。
+# 実 bpy wheel と同じ `bpy` パッケージ名を占有するため、`just type` は
+# `uv run --isolated --with fake-bpy-module-5.1` の使い捨て環境で実行する。
+reportMissingTypeStubs = false
+reportMissingModuleSource = false
+reportImplicitOverride = true
+reportPrivateUsage = "warning"
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py313"
+include = ["*.py"]
+exclude = [
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    ".vscode",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E203", # Whitespace before ':'
+    "E402", # Module level import not at top of file
+    "E501", # Line too long
+    "E741", # Ambiguous variable name
+    "F401", # Imported but unused (re-exports in __init__.py)
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

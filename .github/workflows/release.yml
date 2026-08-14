@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  PYTHON_VERSION: "3.13"
+  UV_VERSION: "0.7.20"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish the extension
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - uses: extractions/setup-just@v4
+
+      # Blender itself builds and validates the extension package.
+      - name: Install Blender
+        uses: bradyajohnston/setup-blender@v5
+        with:
+          version: latest
+
+      - name: Verify the tag matches blender_manifest.toml
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          MANIFEST=$(just version)
+          echo "tag=${TAG} manifest=${MANIFEST}"
+          if [ "${TAG}" != "${MANIFEST}" ]; then
+            echo "::error::tag (${TAG}) does not match blender_manifest.toml version (${MANIFEST})"
+            exit 1
+          fi
+
+      - name: Build the extension zip
+        run: just build
+
+      # Re-validate the packaged archive, not just the source directory.
+      - name: Validate the built archive
+        run: blender --command extension validate "dist/silicone_molding-$(just version).zip"
+
+      - name: List built artifacts
+        run: ls -la dist/
+
+      - name: Extract the changelog section
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const tag = process.env.GITHUB_REF_NAME.replace(/^v/, '');
+            // Escape regex metacharacters before interpolating the version.
+            const escaped = tag.replace(/[.+*?^${}()|[\]\\]/g, '\\$&');
+            const md = fs.readFileSync('CHANGELOG.md', 'utf8');
+            // Match `## [<version>] ...\n` then capture up to the next `## [`
+            // header or end-of-string. The `m` flag is intentionally omitted so
+            // `$` anchors end-of-string, otherwise the capture would stop at the
+            // first blank line.
+            const headerRe = new RegExp(
+              '(?:^|\\n)## \\[' + escaped + '\\][^\\n]*\\n([\\s\\S]*?)(?=\\n## \\[|$)',
+            );
+            const match = md.match(headerRe);
+            const body = match ? match[1].trim() : `Release ${tag}`;
+            if (!match) {
+              core.warning(`No "## [${tag}]" section in CHANGELOG.md; using a placeholder body`);
+            }
+            fs.writeFileSync('notes.md', body);
+            core.info(`Extracted ${body.length} characters of release notes for ${tag}`);
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PRE=""
+          if [[ "${GITHUB_REF_NAME}" =~ (a|b|rc)[0-9]+$ ]]; then
+            PRE="--prerelease"
+          fi
+          echo "Creating release ${GITHUB_REF_NAME} (prerelease flag: '${PRE}')"
+          # shellcheck disable=SC2086
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file notes.md \
+            ${PRE} \
+            ./dist/*.zip

@@ -1,0 +1,72 @@
+name: Blender Test
+
+# Tier 2: installs the built extension into a real Blender and verifies the
+# parts the `bpy` wheel cannot -- packaging, extension registration, and the
+# operator behaving the same inside the actual application.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "justfile"
+      - ".github/workflows/blender-test.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "justfile"
+      - ".github/workflows/blender-test.yml"
+
+env:
+  PYTHON_VERSION: "3.13"
+  UV_VERSION: "0.7.20"
+
+jobs:
+  run_blender_tests:
+    name: ${{ matrix.os }} / blender ${{ matrix.blender-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
+        # The minimum supported version and the newest release.
+        blender-version: ["5.1", "latest"]
+
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # `just version` shells out to `uv run --no-project`, which needs uv but
+      # not the project environment (the 380MB bpy wheel is never fetched here).
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - uses: extractions/setup-just@v4
+
+      - name: Install Blender ${{ matrix.blender-version }}
+        uses: bradyajohnston/setup-blender@v5
+        with:
+          version: ${{ matrix.blender-version }}
+
+      - name: Show Blender version
+        run: blender --version
+
+      # validate -> build -> install-file --enable -> tests/blender/run.py
+      - name: Build, install and verify the extension
+        run: just blender-test
+
+      - name: Upload the built extension
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-${{ matrix.os }}-${{ matrix.blender-version }}
+          path: dist/*.zip
+          if-no-files-found: warn
