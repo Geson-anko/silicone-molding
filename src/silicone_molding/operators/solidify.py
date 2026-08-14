@@ -70,7 +70,9 @@ class SILMOLD_OT_apply_solidify(bpy.types.Operator):
             try:
                 apply_solidify(obj, depsgraph)
             except ValueError as exc:
-                self.report({"WARNING"}, f"{obj.name}: {exc}")
+                # `core.apply_solidify` already names the object in its
+                # message, so prefixing it here would repeat the name.
+                self.report({"WARNING"}, str(exc))
                 continue
             applied += 1
 

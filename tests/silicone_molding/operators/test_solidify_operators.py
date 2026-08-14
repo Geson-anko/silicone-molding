@@ -99,9 +99,7 @@ def add_object(registered: None) -> Iterator[AddObject]:
     _leave_edit_mode()
     # Read the datablocks back only now: an applied object carries a mesh
     # the operator created, not the one the test handed in.
-    datablocks = {
-        (type(obj.data).__name__, obj.data.name): obj.data for obj in created
-    }
+    datablocks = {(type(obj.data).__name__, obj.data.name): obj.data for obj in created}
     for obj in created:
         bpy.data.objects.remove(obj)
     bpy.data.batch_remove([data for data in datablocks.values() if data.users == 0])
@@ -215,9 +213,7 @@ class TestSolidifyOperator:
 
         modifier = find_solidify(obj)
         assert modifier is not None
-        assert modifier.thickness == pytest.approx(
-            THICKNESS_IN_METRE_SCENE, rel=1e-6
-        )
+        assert modifier.thickness == pytest.approx(THICKNESS_IN_METRE_SCENE, rel=1e-6)
 
     def test_thickness_follows_the_scene_unit_scale(
         self,
