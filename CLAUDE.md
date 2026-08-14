@@ -93,7 +93,7 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 | [operators/](src/silicone_molding/operators/) | `core` を Blender オペレータとして公開する薄い層。入力検証と `self.report` |
 | [ui/](src/silicone_molding/ui/)               | サイドバーパネルと `Scene.silicone_molding` に載る `PropertyGroup`         |
 
-現状の実装は動作確認用の最小機能 1 つのみ（`silicone_molding.make_shell` — アクティブメッシュから外側オフセットシェルを生成）。造形機能の本体はこれから。
+現状の実装は Solidify 機能のみ（`silicone_molding.solidify` — 選択メッシュにアドオン専用の Solidify モディファイアを付与・更新 / `silicone_molding.apply_solidify` — そのモディファイアだけをメッシュに焼き込む）。パラメータは壁厚（mm 入力）と方向反転の 2 つ。造形機能の本体はこれから。
 
 ## ツーリング
 
@@ -130,7 +130,7 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 
 細かい制御が必要な場合の直接呼び出し:
 
-- 単一テスト: `uv run pytest tests/silicone_molding/core/test_shell.py -v`
+- 単一テスト: `uv run pytest tests/silicone_molding/core/test_solidify.py -v`
 - キーワードフィルタ: `uv run pytest -v -k "<expr>"`
 - マーカー選択: `uv run pytest -m golden`
 - 単一の pre-commit フック: `uv run pre-commit run ruff -a`
@@ -145,7 +145,7 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 
 以下は Blender 側の UI・キーマップ・既存 `.blend` から参照されるため、実質的な公開 API として扱う。リファクタリングで勝手に変えない:
 
-- オペレータの `bl_idname`（例: `silicone_molding.make_shell`）
+- オペレータの `bl_idname`（例: `silicone_molding.solidify`）
 - `PropertyGroup` のプロパティ名と `Scene` への登録名（`Scene.silicone_molding`）
 - パネルの `bl_idname` / `bl_category`
 

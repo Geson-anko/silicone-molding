@@ -9,8 +9,9 @@ import bpy
 from .operators import SILMOLD_OT_apply_solidify, SILMOLD_OT_solidify
 from .ui import SiliconeMoldingProperties, SILMOLD_PT_main
 
-# Registration order matters: SiliconeMoldingProperties must exist before the
-# Scene pointer that references it, and the panel draws the operators.
+# Order within the tuple is cosmetic; Blender registers these independently.
+# What does matter is that the Scene pointer is attached after the loop, since
+# PointerProperty needs SiliconeMoldingProperties already registered.
 _CLASSES = (
     SiliconeMoldingProperties,
     SILMOLD_OT_solidify,

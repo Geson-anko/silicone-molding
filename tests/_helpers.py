@@ -192,8 +192,8 @@ def assert_matches_golden(
 
     Args:
         mesh: Mesh produced by the code under test.
-        golden_name: File name under ``tests/fixtures/``, e.g.
-            ``"cube_shell.obj"``.
+        golden_name: Name of the fixture file under ``tests/fixtures/``,
+            including its ``.obj`` extension.
         tol: Absolute tolerance for each vertex coordinate.
     """
     golden_path = FIXTURES_DIR / golden_name

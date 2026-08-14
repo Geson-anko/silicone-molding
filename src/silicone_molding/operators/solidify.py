@@ -52,7 +52,9 @@ class SILMOLD_OT_apply_solidify(bpy.types.Operator):
     """Bake the add-on's Solidify modifier into every selected mesh."""
 
     bl_idname = "silicone_molding.apply_solidify"
-    bl_label = "Apply"
+    # Spelled out because the F3 search menu shows the label on its own,
+    # where a bare "Apply" says nothing about what is applied.
+    bl_label = "Apply Solidify"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
