@@ -4,6 +4,8 @@ from typing import override
 
 import bpy
 
+from ..operators import SILMOLD_OT_apply_solidify, SILMOLD_OT_solidify
+
 
 class SILMOLD_PT_main(bpy.types.Panel):
     """Entry point for the add-on in the 3D View sidebar."""
@@ -20,3 +22,8 @@ class SILMOLD_PT_main(bpy.types.Panel):
         # `Panel.layout` is typed optional because it is unset outside a draw
         # call; Blender always populates it before invoking draw().
         assert layout is not None
+        props = context.scene.silicone_molding
+        layout.prop(props, "solidify_thickness_mm")
+        layout.prop(props, "solidify_flip")
+        layout.operator(SILMOLD_OT_solidify.bl_idname, icon="MOD_SOLIDIFY")
+        layout.operator(SILMOLD_OT_apply_solidify.bl_idname)
