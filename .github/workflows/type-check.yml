@@ -1,0 +1,42 @@
+name: Type Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**/*.py"
+      - "pyproject.toml"
+      - "justfile"
+      - ".github/workflows/type-check.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**/*.py"
+      - "pyproject.toml"
+      - "justfile"
+      - ".github/workflows/type-check.yml"
+
+env:
+  PYTHON_VERSION: "3.13"
+  UV_VERSION: "0.7.20"
+
+jobs:
+  run_type-check:
+    # The real `bpy` wheel is never installed here -- `just type` runs pyright in
+    # an isolated env with fake-bpy-module -- so one platform is enough.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - uses: extractions/setup-just@v4
+
+      - name: Run pyright
+        run: just type

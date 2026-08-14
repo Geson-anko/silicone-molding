@@ -1,0 +1,73 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.py"
+      - "tests/fixtures/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "justfile"
+      - ".github/workflows/test.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.py"
+      - "tests/fixtures/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "justfile"
+      - ".github/workflows/test.yml"
+
+env:
+  PYTHON_VERSION: "3.13"
+  UV_VERSION: "0.7.20"
+
+jobs:
+  run_tests:
+    name: ${{ matrix.os }} / bpy ${{ matrix.bpy-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
+        # Both ends of the supported range. 5.1.2 is the oldest bpy for the
+        # minimum supported Blender (5.1); 5.2.0 is the newest. Both are cp313,
+        # so the Python version stays fixed across the matrix.
+        bpy-version: ["5.1.2", "5.2.0"]
+
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - uses: extractions/setup-just@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      # The lockfile pins one bpy; override it per matrix leg. Every later `uv
+      # run` must skip its implicit sync or it would restore the locked version.
+      - name: Pin bpy to ${{ matrix.bpy-version }}
+        run: uv pip install "bpy==${{ matrix.bpy-version }}"
+
+      - name: Check installed packages
+        env:
+          UV_NO_SYNC: "1"
+        run: |
+          uv run python -V
+          uv run python -c "import bpy; print('bpy', bpy.app.version_string)"
+          uv pip list
+
+      - name: Run pytest with coverage
+        env:
+          UV_NO_SYNC: "1"
+        run: just test
