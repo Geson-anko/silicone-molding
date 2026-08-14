@@ -6,17 +6,33 @@ Packaged as a Blender Extension: metadata lives in
 
 import bpy
 
-from .operators import SILMOLD_OT_apply_solidify, SILMOLD_OT_solidify
-from .ui import SiliconeMoldingProperties, SILMOLD_PT_main
+from .operators import (
+    SILMOLD_OT_apply_solidify,
+    SILMOLD_OT_copy_value,
+    SILMOLD_OT_measure_volume,
+    SILMOLD_OT_solidify,
+)
+from .ui import (
+    SiliconeMoldingProperties,
+    SILMOLD_PT_main,
+    SILMOLD_PT_measurement,
+    SILMOLD_PT_processing,
+)
 
-# Order within the tuple is cosmetic; Blender registers these independently.
-# What does matter is that the Scene pointer is attached after the loop, since
+# The order matters: SILMOLD_PT_main has to be registered before its two
+# sub-panels, because Blender resolves `bl_parent_id` at registration time and
+# raises RuntimeError when the parent is not there yet, which would fail
+# register() as a whole. The Scene pointer is attached after the loop, since
 # PointerProperty needs SiliconeMoldingProperties already registered.
 _CLASSES = (
     SiliconeMoldingProperties,
     SILMOLD_OT_solidify,
     SILMOLD_OT_apply_solidify,
+    SILMOLD_OT_measure_volume,
+    SILMOLD_OT_copy_value,
     SILMOLD_PT_main,
+    SILMOLD_PT_measurement,
+    SILMOLD_PT_processing,
 )
 
 

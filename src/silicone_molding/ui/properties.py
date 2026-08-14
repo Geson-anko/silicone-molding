@@ -26,3 +26,23 @@ class SiliconeMoldingProperties(bpy.types.PropertyGroup):
         description="Grow the wall inwards instead of outwards",
         default=False,
     )
+
+    # Deliberately no ``unit="VOLUME"``, for the same reason as above: it
+    # would make Blender render the value in the scene's unit settings, while
+    # this add-on always reports volumes in cubic centimetres.
+    volume_cm3: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Volume (cm3)",
+        description=(
+            "Total volume of the meshes selected when Measure Volume was last "
+            "used. It is a snapshot: later changes to the scene do not update it"
+        ),
+        default=0.0,
+        min=0.0,
+        precision=2,
+    )
+
+    volume_measured: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Measured",
+        description="Whether Volume (cm3) holds the result of a measurement",
+        default=False,
+    )
