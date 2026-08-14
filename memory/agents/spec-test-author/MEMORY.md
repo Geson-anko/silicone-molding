@@ -4,3 +4,7 @@
 プロジェクト全体で共有すべき知見は `memory/` 直下へ書き、`memory/MEMORY.md` に索引を足す。
 
 <!-- - [タイトル](file.md) — 一行の要約 -->
+
+- [モディファイア焼き込みテストの落とし穴](knowledge_modifier_bake_tests.md) — float32 由来の体積誤差、空メッシュで落ちる mesh_invariants、data 差し替え前提の fixture 後始末
+- [background でのオペレータテスト](knowledge_operator_tests_in_background.md) — 起動時シーンの選択、edit mode 検証、`hasattr(bpy.ops...)` が常に真、batch_remove の segfault
+- [テストモジュール名の一意性](knowledge_tier1_test_module_names.md) — `__init__.py` 無し + prepend import mode のため basename 重複で collection error。ミラー規約と衝突する

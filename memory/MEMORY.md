@@ -17,6 +17,11 @@
 
 - [計画・仕様書の言語](feedback_planning_doc_language.md) — 仕様書・CLAUDE.md・skill は日本語で書く
 - [ユーザー向けドキュメントは後回し](feedback_defer_user_docs.md) — README / docs は依頼されるまで書かない
+- [モディファイア出力に golden を作らない](feedback_no_golden_for_modifier_output.md) — Blender 標準モディファイアの結果は不変量だけで検証する
+
+## specs
+
+- [Solidify 機能](specs/solidify.md) — 選択メッシュへの固定名 Solidify モディファイアの付与・更新と、bpy.ops 非依存の適用
 
 ## reference
 
