@@ -1,4 +1,5 @@
-"""End-to-end path through registration, the scene properties and the operator.
+"""End-to-end path through registration, the scene properties and the
+operators.
 
 This is the tier-1 counterpart of ``tests/blender/run.py``: it exercises
 the same code against the ``bpy`` wheel, while the tier-2 script
@@ -9,13 +10,8 @@ from collections.abc import Iterator
 
 import bpy
 import pytest
-from _helpers import make_cube_mesh, mesh_invariants
 
 import silicone_molding
-from silicone_molding.operators import SILMOLD_OT_make_shell
-
-CUBE_SIZE = 2.0
-THICKNESS = 0.2
 
 
 @pytest.fixture(scope="module")
@@ -25,46 +21,33 @@ def registered() -> Iterator[None]:
     silicone_molding.unregister()
 
 
-@pytest.fixture
-def active_cube(registered: None) -> Iterator[bpy.types.Object]:
-    """A cube object linked into the scene and made active."""
-    mesh = make_cube_mesh(CUBE_SIZE, "OpCube")
-    obj = bpy.data.objects.new("OpCube", mesh)
-    bpy.context.scene.collection.objects.link(obj)
-    bpy.context.view_layer.objects.active = obj
-    yield obj
-
-    bpy.data.objects.remove(obj)
-    bpy.data.meshes.remove(mesh)
-
-
 class TestRegistration:
     def test_scene_gains_the_settings_property_group(self, registered: None) -> None:
-        bpy.context.scene.silicone_molding.thickness = THICKNESS
+        assert bpy.context.scene.silicone_molding is not None
 
-        assert bpy.context.scene.silicone_molding.thickness == pytest.approx(THICKNESS)
+    def test_both_solidify_operators_become_callable(self, registered: None) -> None:
+        # `dir` lists the operators Blender actually resolved; `hasattr` on
+        # a `bpy.ops` namespace is always true, so it would prove nothing.
+        operators = dir(bpy.ops.silicone_molding)
+        assert "solidify" in operators
+        assert "apply_solidify" in operators
 
-    def test_operator_is_reachable_through_bpy_ops(self, registered: None) -> None:
-        assert hasattr(bpy.ops.silicone_molding, "make_shell")
 
-
-class TestMakeShellOperator:
-    def test_creates_a_shell_object_next_to_the_active_mesh(
-        self, active_cube: bpy.types.Object
+class TestSolidifySettings:
+    @pytest.mark.api_contract
+    def test_scene_settings_carry_the_solidify_properties(
+        self, registered: None
     ) -> None:
-        bpy.context.scene.silicone_molding.thickness = THICKNESS
+        # Contract pin, not a behaviour test: these names are written into
+        # users' .blend files and read back from them (NFR-4).
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert "solidify_thickness_mm" in properties
+        assert "solidify_flip" in properties
 
-        result = bpy.ops.silicone_molding.make_shell()
-
-        assert result == {"FINISHED"}
-        shell = bpy.data.objects["OpCube_Shell"]
-        invariants = mesh_invariants(shell.data)
-        assert invariants.is_watertight
-        assert invariants.bbox_max == pytest.approx((1.2, 1.2, 1.2), abs=1e-5)
-
-        bpy.data.meshes.remove(shell.data)
-
-    def test_is_unavailable_without_an_active_mesh(self, registered: None) -> None:
-        bpy.context.view_layer.objects.active = None
-
-        assert not SILMOLD_OT_make_shell.poll(bpy.context)
+    def test_thickness_is_not_declared_as_a_length_property(
+        self, registered: None
+    ) -> None:
+        # FR-2: unit="LENGTH" would re-display and re-interpret the value
+        # in the scene's length unit, breaking "always entered in mm".
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert properties["solidify_thickness_mm"].unit == "NONE"

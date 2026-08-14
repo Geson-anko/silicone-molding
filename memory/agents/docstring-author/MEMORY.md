@@ -3,4 +3,10 @@
 このエージェント固有のメモリ索引。1 メモリ 1 ファイル、ここには 1 行のリンクだけを置く。
 プロジェクト全体で共有すべき知見は `memory/` 直下へ書き、`memory/MEMORY.md` に索引を足す。
 
-<!-- - [タイトル](file.md) — 一行の要約 -->
+## feedback
+
+- [コメントは足りているなら足さない](feedback_comment_minimalism.md) — 過剰な加筆はしない。直すのは実装との食い違いと why 不在のコメント
+
+## project
+
+- [ドキュメントがドリフトする箇所](project_doc_drift_hotspots.md) — CLAUDE.md の現状記述 / public surface 例 / CHANGELOG Unreleased / golden 基盤

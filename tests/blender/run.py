@@ -6,10 +6,11 @@ Invoked by ``just blender-test`` as::
 
 This runs *after* ``extension install-file``, so it verifies the parts the
 ``bpy`` wheel cannot: that the built zip installs, that Blender resolves
-the add-on under its extension module path, and that the operator behaves
+the add-on under its extension module path, and that the operators behave
 identically there. It deliberately has **no third-party dependencies** --
 not even pytest -- so that it needs nothing installed into Blender's own
-Python on any of the three CI platforms.
+Python on any of the three CI platforms. It also imports nothing from
+``tests/``, which is not on Blender's path.
 
 Failures raise ``AssertionError``; the exit code is set explicitly at the
 end because Blender swallows tracebacks from ``--python`` scripts.
@@ -17,7 +18,6 @@ end because Blender swallows tracebacks from ``--python`` scripts.
 
 import sys
 import traceback
-from pathlib import Path
 
 import addon_utils
 import bpy
@@ -25,23 +25,23 @@ import bpy
 # Blender exposes user-repository extensions under this module path.
 ADDON_MODULE = "bl_ext.user_default.silicone_molding"
 
-REPO_ROOT = Path(__file__).parents[2]
-GOLDEN = REPO_ROOT / "tests" / "fixtures" / "cube_shell.obj"
+# Mirrors silicone_molding.core.MODIFIER_NAME, which tier 1 pins as public
+# API. Spelled out here because the add-on is imported by Blender, not by
+# this script.
+MODIFIER_NAME = "Silicone Molding Solidify"
 
 CUBE_SIZE = 2.0
-THICKNESS = 0.2
+THICKNESS_MM = 3.0
+
+# THICKNESS_MM in Blender units, with the default scene scale of 1 unit = 1 m.
+THICKNESS = 0.003
+
+# A 2x2x2 cube solidified outwards: the original 8 vertices plus 8 on the
+# outer shell, still 12 quads. Half the extent grows by the wall thickness.
+EXPECTED_VERTEX_COUNT = 16
+EXPECTED_FACE_COUNT = 12
+EXPECTED_EXTENT = CUBE_SIZE / 2 + THICKNESS
 TOLERANCE = 1e-5
-
-
-def read_golden_vertices(path: Path) -> list[tuple[float, float, float]]:
-    """Read vertex positions from the golden OBJ written by the tier-1
-    tests."""
-    vertices: list[tuple[float, float, float]] = []
-    for line in path.read_text().splitlines():
-        if line.startswith("v "):
-            x, y, z = (float(part) for part in line.split()[1:4])
-            vertices.append((x, y, z))
-    return vertices
 
 
 def check_addon_is_enabled() -> None:
@@ -50,46 +50,78 @@ def check_addon_is_enabled() -> None:
     assert (
         ADDON_MODULE in sys.modules or ADDON_MODULE in enabled
     ), f"{ADDON_MODULE} was not enabled; installed add-ons: {sorted(enabled)}"
-    assert hasattr(bpy.ops, "silicone_molding"), "operator namespace is missing"
-    assert hasattr(bpy.ops.silicone_molding, "make_shell"), "make_shell is missing"
+    # `dir` lists the operators Blender actually resolved; `hasattr` on a
+    # `bpy.ops` namespace is always true, so it would prove nothing.
+    operators = dir(bpy.ops.silicone_molding)
+    for name in ("solidify", "apply_solidify"):
+        assert (
+            name in operators
+        ), f"operator {name} is missing; silicone_molding has {sorted(operators)}"
 
 
 def check_scene_properties() -> None:
     """The scene must carry the add-on's settings after registration."""
-    bpy.context.scene.silicone_molding.thickness = THICKNESS
-    actual = bpy.context.scene.silicone_molding.thickness
-    assert abs(actual - THICKNESS) < TOLERANCE, f"thickness round-trip gave {actual}"
+    settings = bpy.context.scene.silicone_molding
+    assert settings is not None, "scene settings are missing"
+    names = set(settings.bl_rna.properties.keys())
+    for name in ("solidify_thickness_mm", "solidify_flip"):
+        assert name in names, f"{name} is missing; scene settings have {sorted(names)}"
 
 
-def check_operator_matches_golden() -> None:
-    """Running the operator on a real cube must reproduce the golden mesh."""
+def check_solidify_then_apply_gives_a_double_walled_cube() -> None:
+    """Both operators must produce the geometry tier 1 asserts.
+
+    A 2x2x2 cube walled 3 mm outwards becomes two shells: 16 vertices, 12
+    faces, reaching 1.003 on every axis. The extent depends on Even
+    Thickness being on -- without it the corners would only reach
+    1 + 0.003/sqrt(3).
+    """
+    for existing in bpy.context.scene.objects:
+        existing.select_set(False)
+
     bpy.ops.mesh.primitive_cube_add(size=CUBE_SIZE, location=(0.0, 0.0, 0.0))
-    source = bpy.context.active_object
-    assert source is not None, "primitive_cube_add did not leave an active object"
+    cube = bpy.context.active_object
+    assert cube is not None, "primitive_cube_add did not leave an active object"
+    cube.select_set(True)
 
-    bpy.context.scene.silicone_molding.thickness = THICKNESS
-    result = bpy.ops.silicone_molding.make_shell()
-    assert result == {"FINISHED"}, f"operator returned {result}"
+    bpy.context.scene.unit_settings.scale_length = 1.0
+    settings = bpy.context.scene.silicone_molding
+    settings.solidify_thickness_mm = THICKNESS_MM
+    settings.solidify_flip = False
 
-    shell = bpy.data.objects.get(f"{source.name}_Shell")
-    assert shell is not None, "operator did not create a shell object"
+    result = bpy.ops.silicone_molding.solidify()
+    assert result == {"FINISHED"}, f"solidify returned {result}"
+    stack = [modifier.name for modifier in cube.modifiers]
+    assert MODIFIER_NAME in stack, f"{MODIFIER_NAME!r} not added; stack is {stack}"
 
-    expected = sorted(read_golden_vertices(GOLDEN))
-    actual = sorted(tuple(round(c, 6) for c in v.co) for v in shell.data.vertices)
-    assert len(actual) == len(
-        expected
-    ), f"vertex count {len(actual)} != golden {len(expected)}"
-    for index, (got, want) in enumerate(zip(actual, expected)):
-        for axis, (a, e) in enumerate(zip(got, want)):
-            assert (
-                abs(a - e) <= TOLERANCE
-            ), f"vertex {index} axis {axis}: {a} != {e} (tol {TOLERANCE})"
+    result = bpy.ops.silicone_molding.apply_solidify()
+    assert result == {"FINISHED"}, f"apply_solidify returned {result}"
+    stack = [modifier.name for modifier in cube.modifiers]
+    assert MODIFIER_NAME not in stack, f"{MODIFIER_NAME!r} survived apply; got {stack}"
+
+    mesh = cube.data
+    assert (
+        len(mesh.vertices) == EXPECTED_VERTEX_COUNT
+    ), f"{len(mesh.vertices)} vertices, expected {EXPECTED_VERTEX_COUNT}"
+    assert (
+        len(mesh.polygons) == EXPECTED_FACE_COUNT
+    ), f"{len(mesh.polygons)} faces, expected {EXPECTED_FACE_COUNT}"
+
+    for axis, label in enumerate("xyz"):
+        coordinates = [vertex.co[axis] for vertex in mesh.vertices]
+        low, high = min(coordinates), max(coordinates)
+        assert (
+            abs(low + EXPECTED_EXTENT) <= TOLERANCE
+        ), f"{label} min is {low}, expected {-EXPECTED_EXTENT} (tol {TOLERANCE})"
+        assert (
+            abs(high - EXPECTED_EXTENT) <= TOLERANCE
+        ), f"{label} max is {high}, expected {EXPECTED_EXTENT} (tol {TOLERANCE})"
 
 
 CHECKS = (
     check_addon_is_enabled,
     check_scene_properties,
-    check_operator_matches_golden,
+    check_solidify_then_apply_gives_a_double_walled_cube,
 )
 
 

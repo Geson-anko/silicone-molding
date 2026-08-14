@@ -4,7 +4,7 @@ from typing import override
 
 import bpy
 
-from ..operators import SILMOLD_OT_make_shell
+from ..operators import SILMOLD_OT_apply_solidify, SILMOLD_OT_solidify
 
 
 class SILMOLD_PT_main(bpy.types.Panel):
@@ -22,5 +22,8 @@ class SILMOLD_PT_main(bpy.types.Panel):
         # `Panel.layout` is typed optional because it is unset outside a draw
         # call; Blender always populates it before invoking draw().
         assert layout is not None
-        layout.prop(context.scene.silicone_molding, "thickness")
-        layout.operator(SILMOLD_OT_make_shell.bl_idname, icon="MOD_SOLIDIFY")
+        props = context.scene.silicone_molding
+        layout.prop(props, "solidify_thickness_mm")
+        layout.prop(props, "solidify_flip")
+        layout.operator(SILMOLD_OT_solidify.bl_idname, icon="MOD_SOLIDIFY")
+        layout.operator(SILMOLD_OT_apply_solidify.bl_idname)
