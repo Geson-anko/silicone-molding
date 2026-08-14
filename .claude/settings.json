@@ -2,7 +2,6 @@
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
-  "enableAllProjectMcpServers": true,
   "permissions": {
     "allow": [
       "Bash(ls:*)",
@@ -149,7 +148,8 @@
       "Bash(zipinfo:*)",
       "Bash(tar -tf:*)",
       "WebSearch",
-      "WebFetch"
+      "WebFetch",
+      "Bash(git switch *)"
     ],
     "deny": [
       "Read(~/.ssh/**)",
@@ -167,5 +167,6 @@
     "additionalDirectories": [
       ".claude/worktrees/**"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true
 }
