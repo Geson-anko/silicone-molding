@@ -8,13 +8,19 @@ from .solidify import (
     ensure_solidify,
     find_solidify,
 )
-from .units import mm_to_units
+from .units import cubic_units_to_ml, format_ml, mm_to_units
+from .volume import VolumeSummary, total_volume, world_volume
 
 __all__ = [
     "MIN_THICKNESS_MM",
     "MODIFIER_NAME",
+    "VolumeSummary",
     "apply_solidify",
+    "cubic_units_to_ml",
     "ensure_solidify",
     "find_solidify",
+    "format_ml",
     "mm_to_units",
+    "total_volume",
+    "world_volume",
 ]

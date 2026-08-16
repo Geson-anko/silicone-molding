@@ -32,6 +32,26 @@ class TestRegistration:
         assert "solidify" in operators
         assert "apply_solidify" in operators
 
+    def test_both_measurement_operators_become_callable(self, registered: None) -> None:
+        # AC-49 / AC-51 (volume_measurement spec). `dir` for the same reason
+        # as above.
+        operators = dir(bpy.ops.silicone_molding)
+        assert "measure_volume" in operators
+        assert "copy_value" in operators
+
+    def test_the_sidebar_registers_as_a_parent_with_two_sub_panels(
+        self, registered: None
+    ) -> None:
+        # AC-56 / FR-8: Blender resolves `bl_parent_id` while registering, so
+        # a sub-panel registered before SILMOLD_PT_main raises RuntimeError
+        # and takes the whole add-on down with it. The module fixture is what
+        # actually detects that regression; this test names the guarantee and
+        # confirms Blender resolved both children.
+        types = dir(bpy.types)
+        assert "SILMOLD_PT_main" in types
+        assert "SILMOLD_PT_measurement" in types
+        assert "SILMOLD_PT_processing" in types
+
 
 class TestSolidifySettings:
     @pytest.mark.api_contract
@@ -51,3 +71,27 @@ class TestSolidifySettings:
         # in the scene's length unit, breaking "always entered in mm".
         properties = bpy.context.scene.silicone_molding.bl_rna.properties
         assert properties["solidify_thickness_mm"].unit == "NONE"
+
+
+class TestMeasurementSettings:
+    """Where a measurement is stored (volume_measurement spec §5.7)."""
+
+    @pytest.mark.api_contract
+    def test_scene_settings_carry_the_measurement_properties(
+        self, registered: None
+    ) -> None:
+        # Contract pin, not a behaviour test: AC-57 / NFR-4. These two names
+        # are written into users' .blend files and read back from them, and
+        # the panel addresses them by name.
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert "volume_ml" in properties
+        assert "volume_measured" in properties
+
+    def test_the_volume_is_not_declared_as_a_volume_property(
+        self, registered: None
+    ) -> None:
+        # AC-58 / FR-29: unit="VOLUME" would re-display the value in the
+        # scene's unit settings, breaking "always shown in mL" (FR-38). Same
+        # reasoning as the millimetre thickness above.
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert properties["volume_ml"].unit == "NONE"

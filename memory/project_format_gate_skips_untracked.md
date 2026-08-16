@@ -11,4 +11,4 @@ metadata:
 
 **How to apply:** 新規ファイルを含む変更では、`just run` の前に `git add -A` で intent を立てておく（`git add -N` でもよい）。あるいはコミット後にもう一度 `just format` を回して確認する。エージェントに実装させた場合は成果物がほぼ全部 untracked になるので、特に効く。
 
-関連して、`just format` は失敗時にファイルを書き換えるので、`tests/` を触ってはいけないエージェントが `just run` を回すと担当外のファイルに差分が出る。[[feedback-planning-doc-language]] とは別軸の運用上の注意。
+関連して、`just format` は失敗時にファイルを書き換えるので、`tests/` を触ってはいけないエージェントが `just run` を回すと担当外のファイルに差分が出る。[[feedback_planning_doc_language]] とは別軸の運用上の注意。

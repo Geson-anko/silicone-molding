@@ -93,7 +93,12 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 | [operators/](src/silicone_molding/operators/) | `core` を Blender オペレータとして公開する薄い層。入力検証と `self.report` |
 | [ui/](src/silicone_molding/ui/)               | サイドバーパネルと `Scene.silicone_molding` に載る `PropertyGroup`         |
 
-現状の実装は Solidify 機能のみ（`silicone_molding.solidify` — 選択メッシュにアドオン専用の Solidify モディファイアを付与・更新 / `silicone_molding.apply_solidify` — そのモディファイアだけをメッシュに焼き込む）。パラメータは壁厚（mm 入力）と方向反転の 2 つ。造形機能の本体はこれから。
+**サイドバーの構成**: 親パネル `SILMOLD_PT_main` は中身を持たないヘッダーで、コントロールはその下のサブパネル 2 つが持つ（`SILMOLD_PT_measurement` = Measurement、`SILMOLD_PT_processing` = Processing。並び順は `bl_order`）。機能を足すときはどちらのセクションに載せるかを先に決める。
+
+現状の実装は以下の 2 機能。造形機能の本体はこれから。
+
+- **Solidify**（Processing）— `silicone_molding.solidify` で選択メッシュにアドオン専用の Solidify モディファイアを付与・更新し、`silicone_molding.apply_solidify` でそのモディファイアだけをメッシュに焼き込む。パラメータは壁厚（mm 入力）と方向反転の 2 つ
+- **体積計測**（Measurement）— `silicone_molding.measure_volume` が選択メッシュの体積をモディファイア込みのワールド実寸で合計し、mL で `Scene.silicone_molding` に保存する（ボタン押下時のスナップショット。閉じていないメッシュがあれば数値を出さずエラー）。`silicone_molding.copy_value` は渡された文字列をクリップボードへコピーするだけの汎用オペレータで、体積という概念を持たない
 
 ## ツーリング
 
