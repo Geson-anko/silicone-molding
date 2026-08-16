@@ -1,7 +1,6 @@
 ---
 name: testing-strategy
 description: "このプロジェクトの 2 階層テスト戦略: tier 1 (PyPI bpy wheel で pytest) と tier 2 (実 Blender に install して統合チェック)。golden mesh の作法、不変量ベースの検証、bpy/bmesh をモックしない方針、書いてはいけないテストの一覧、tests のレイアウトと import 順の制約。Triggers: 'テストを書く', 'test を追加', 'テスト戦略', 'golden mesh', 'fixture', 'どこにテストを置く', 'テストが落ちる', 'カバレッジ'."
-version: 0.1.0
 ---
 
 # テスト戦略
@@ -143,6 +142,6 @@ just blender-test                                # tier 2 (build → install →
 BLENDER=/path/to/blender just blender-test       # 別バージョンの Blender で
 ```
 
-tier 2 は Blender のユーザー設定を書き換えるので、**複数同時に走らせない**（[/do-on-worktree](../do-on-worktree/SKILL.md) の共有 state の項を参照）。
+tier 2 は Blender のユーザー設定を書き換えるので、**複数同時に走らせない**（[$do-on-worktree](../do-on-worktree/SKILL.md) の共有 state の項を参照）。
 
-実 Blender を対話的に触って挙動を確かめたい場合は [/blender-mcp](../blender-mcp/SKILL.md)。
+実 Blender を対話的に触って挙動を確かめたい場合は [$blender-mcp](../blender-mcp/SKILL.md)。

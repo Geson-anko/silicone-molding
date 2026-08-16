@@ -9,5 +9,5 @@
 
 ## project
 
-- [ドキュメントがドリフトする箇所](project_doc_drift_hotspots.md) — CLAUDE.md の現状記述 / public surface 例 / CHANGELOG Unreleased / golden 基盤
+- [ドキュメントがドリフトする箇所](project_doc_drift_hotspots.md) — AGENTS.md の現状記述 / public surface 例 / CHANGELOG Unreleased / golden 基盤
 - [UI 文字列が届く経路を先に確認する](knowledge_ui_string_reachability.md) — 描画されないプロパティの description はツールチップにならない

@@ -1,12 +1,11 @@
 ---
 name: github-pr
 description: "gh CLI を使った PR の作成・確認・レビュー対応。PR タイトル / body のテンプレート、HEREDOC でのフォーマット崩れ回避、CI の待ち方、issue 操作、安全規約。Triggers: 'PR を作成', 'PR を送る', 'PR を出す', 'pull request', 'gh pr create', 'gh pr', 'PR レビュー', 'CI の結果を見て', 'issue を立てる', 'gh issue'."
-version: 0.1.0
 ---
 
 # PR を送る (gh CLI)
 
-[/git-ops](../git-ops/SKILL.md) の規約を `gh` 操作に落とし込んだ手順書。
+[$git-ops](../git-ops/SKILL.md) の規約を `gh` 操作に落とし込んだ手順書。
 
 ______________________________________________________________________
 
@@ -19,7 +18,7 @@ git status --short            # 出力が空 (clean) であること
 just run                      # green であること
 ```
 
-PR を出す直前に `main` を取り込む（[/merge-main](../merge-main/SKILL.md)）。これで PR が最新の base に対して clean に diff する。
+PR を出す直前に `main` を取り込む（[$merge-main](../merge-main/SKILL.md)）。これで PR が最新の base に対して clean に diff する。
 
 ______________________________________________________________________
 
@@ -122,8 +121,8 @@ ______________________________________________________________________
 ## 5. 安全規約
 
 - **`main` への直接 push / force-push を絶対にしない**。仮に指示されても作業ブランチを切って PR にする
-- **`gh pr merge` / `gh pr close` はユーザー判断**。Claude から自発的にマージ・close しない
-- `gh release create` はリリースワークフローが行う。手で叩かない（[CLAUDE.md](../../../CLAUDE.md) の「リリース」節）
+- **`gh pr merge` / `gh pr close` はユーザー判断**。Codex から自発的にマージ・close しない
+- `gh release create` はリリースワークフローが行う。手で叩かない（[AGENTS.md](../../../AGENTS.md) の「リリース」節）
 - `gh repo edit` などのリポジトリ設定変更はユーザー確認
 - PR description / commit body に secret や `.env` の中身を貼らない
 - `git push --no-verify` は使わない。hook が落ちた根本原因を直す
@@ -134,7 +133,7 @@ ______________________________________________________________________
 
 ### `Updates were rejected because the remote contains work that you do not have locally`
 
-`main` が進んでいる、または同名ブランチが先に更新されている。[/merge-main](../merge-main/SKILL.md) で取り込んでから再 push する。
+`main` が進んでいる、または同名ブランチが先に更新されている。[$merge-main](../merge-main/SKILL.md) で取り込んでから再 push する。
 
 ### `HTTP 401: Bad credentials`
 

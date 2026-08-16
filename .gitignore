@@ -26,9 +26,8 @@ build/
 *.blend1
 *.blend2
 
-# Claude Code worktrees
-.claude/worktrees/
-.claude/settings.local.json
+# Local Git worktrees
+.worktrees/
 
 # Environment overrides
 .env
