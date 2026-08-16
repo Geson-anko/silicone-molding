@@ -4,7 +4,7 @@ from typing import Final, override
 
 import bpy
 
-from ..core import format_cm3
+from ..core import format_ml
 from ..operators import (
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_copy_value,
@@ -14,7 +14,7 @@ from ..operators import (
 
 #: Left column of the volume row. The unit lives in the label so that the
 #: value stays a bare number, ready to be pasted into a spreadsheet.
-_VOLUME_LABEL: Final = "Volume (cm3)"
+_VOLUME_LABEL: Final = "Volume (mL)"
 
 #: Stands in for the value before the first measurement. Keeping it to two
 #: characters keeps the row's shape identical before and after measuring.
@@ -70,7 +70,7 @@ class SILMOLD_PT_measurement(bpy.types.Panel):
 
         # Formatted exactly once: the same string is what the user sees and
         # what the copy operator puts on the clipboard.
-        text = format_cm3(props.volume_cm3)
+        text = format_ml(props.volume_ml)
         # `layout.label` cannot be clicked, so the value is drawn as the text
         # of an un-embossed operator button instead.
         copy = row.operator(SILMOLD_OT_copy_value.bl_idname, text=text, emboss=False)

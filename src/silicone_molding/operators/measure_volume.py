@@ -12,7 +12,7 @@ from typing import Final, override
 
 import bpy
 
-from ..core import cubic_units_to_cm3, format_cm3, total_volume
+from ..core import cubic_units_to_ml, format_ml, total_volume
 from .solidify import OperatorReturn
 
 #: How many object names the error message may list before it falls back to a
@@ -27,7 +27,7 @@ class SILMOLD_OT_measure_volume(bpy.types.Operator):
     bl_label = "Measure Volume"
     # The tooltip is the only place the snapshot caveat reaches the user: the
     # result is shown as this operator's sibling button rather than through
-    # `layout.prop()`, so the description on `volume_cm3` never surfaces.
+    # `layout.prop()`, so the description on `volume_ml` never surfaces.
     bl_description = (
         "Measure the total volume of the selected meshes. "
         "The shown value stays as measured until you press this again"
@@ -69,7 +69,7 @@ class SILMOLD_OT_measure_volume(bpy.types.Operator):
             self.report({"ERROR"}, f"Not watertight: {listed}")
             return {"CANCELLED"}
 
-        props.volume_cm3 = cubic_units_to_cm3(
+        props.volume_ml = cubic_units_to_ml(
             summary.volume,
             context.scene.unit_settings.scale_length,
         )
@@ -78,6 +78,6 @@ class SILMOLD_OT_measure_volume(bpy.types.Operator):
         # scene property is single precision and the panel formats what is
         # stored, so reading it back keeps the reported, displayed, and copied
         # strings identical.
-        shown = format_cm3(props.volume_cm3)
-        self.report({"INFO"}, f"{shown} cm3 from {summary.measured_count} object(s)")
+        shown = format_ml(props.volume_ml)
+        self.report({"INFO"}, f"{shown} mL from {summary.measured_count} object(s)")
         return {"FINISHED"}

@@ -8,7 +8,7 @@ from .solidify import (
     ensure_solidify,
     find_solidify,
 )
-from .units import cubic_units_to_cm3, format_cm3, mm_to_units
+from .units import cubic_units_to_ml, format_ml, mm_to_units
 from .volume import VolumeSummary, total_volume, world_volume
 
 __all__ = [
@@ -16,10 +16,10 @@ __all__ = [
     "MODIFIER_NAME",
     "VolumeSummary",
     "apply_solidify",
-    "cubic_units_to_cm3",
+    "cubic_units_to_ml",
     "ensure_solidify",
     "find_solidify",
-    "format_cm3",
+    "format_ml",
     "mm_to_units",
     "total_volume",
     "world_volume",

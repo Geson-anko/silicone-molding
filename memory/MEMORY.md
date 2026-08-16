@@ -25,7 +25,7 @@
 ## specs
 
 - [Solidify 機能](specs/solidify.md) — 選択メッシュへの固定名 Solidify モディファイアの付与・更新と、bpy.ops 非依存の適用
-- [体積計測 / サイドバーのセクション分け](specs/volume_measurement.md) — 親パネル + サブパネル 2 つへの再編と、ボタンで選択メッシュの合計体積を計測し cm³ で表示・クリックでコピーする機能
+- [体積計測 / サイドバーのセクション分け](specs/volume_measurement.md) — 親パネル + サブパネル 2 つへの再編と、ボタンで選択メッシュの合計体積を計測し mL で表示・クリックでコピーする機能
 
 ## reference
 

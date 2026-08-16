@@ -60,7 +60,7 @@ metadata:
 ## 数値と書式
 
 - `unit_settings.scale_length` は正にクランプされる（0 を代入すると 1e-9）。float32（0.001 → 0.0010000000474974513）。ゼロ除算ガードは書かない
-- BU³ → cm³ は `volume * (scale_length * 100) ** 3`
+- BU³ → mL（= cm³）は `volume * (scale_length * 100) ** 3`
 - `f"{x:.2f}"` は指数表記も桁区切りも出さない（`1.2e9` → `"1200000000.00"`、`1e-7` → `"0.00"`）。スプレッドシート貼り付け用の文字列として安全
 
 関連: [[prefer-explicit-trigger-over-live-recompute]]、[[bpy-typing-and-precision-gotchas]]

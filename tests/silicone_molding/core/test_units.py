@@ -15,8 +15,8 @@ from types import ModuleType
 import pytest
 
 from silicone_molding.core import (
-    cubic_units_to_cm3,
-    format_cm3,
+    cubic_units_to_ml,
+    format_ml,
     mm_to_units,
     units as units_module,
 )
@@ -51,7 +51,7 @@ class TestMmToUnits:
 
 #: A cubic metre is (100 cm) ** 3, so this is what one cubic Blender unit
 #: is worth in a scene left at the default scale_length of 1.0.
-CM3_PER_CUBIC_UNIT = 100.0**3
+ML_PER_CUBIC_UNIT = 100.0**3
 
 #: The 2 cm cube of the spec (6.3), 0.02 BU a side in a default scene.
 TWO_CM_CUBE_IN_UNITS = 0.02**3
@@ -64,13 +64,13 @@ class TestCubicUnitsToCm3:
     def test_one_cubic_unit_is_a_million_cubic_centimetres_by_default(self) -> None:
         # AC-1. scale_length 1.0 makes a unit a metre, and a cubic metre
         # is a million cubic centimetres.
-        assert cubic_units_to_cm3(1.0, 1.0) == pytest.approx(
-            CM3_PER_CUBIC_UNIT, rel=1e-12
+        assert cubic_units_to_ml(1.0, 1.0) == pytest.approx(
+            ML_PER_CUBIC_UNIT, rel=1e-12
         )
 
     def test_a_two_centimetre_cube_measures_eight_millilitres(self) -> None:
-        # AC-2 / G-1: 8 cm3 is 8 ml, the number the user pours.
-        assert cubic_units_to_cm3(TWO_CM_CUBE_IN_UNITS, 1.0) == pytest.approx(
+        # AC-2 / G-1: 8 mL is the number the user pours.
+        assert cubic_units_to_ml(TWO_CM_CUBE_IN_UNITS, 1.0) == pytest.approx(
             8.0, rel=1e-9
         )
 
@@ -79,20 +79,20 @@ class TestCubicUnitsToCm3:
         # a 20-unit cube is the same physical object as the 0.02-unit one
         # above and must yield the same millilitres. Only the scene's unit
         # expression changed, never the material in the mould.
-        assert cubic_units_to_cm3(
+        assert cubic_units_to_ml(
             TWO_CM_CUBE_IN_MILLIMETRE_UNITS, 0.001
         ) == pytest.approx(8.0, rel=1e-6)
 
     def test_no_volume_converts_to_no_volume(self) -> None:
         # AC-4.
-        assert cubic_units_to_cm3(0.0, 1.0) == 0.0
+        assert cubic_units_to_ml(0.0, 1.0) == 0.0
 
     def test_doubling_the_scene_scale_multiplies_the_volume_by_eight(self) -> None:
         # AC-5: volume is a third-degree quantity in a length, so the
         # conversion has to cube scale_length rather than scale by it.
         # 8 * 1e6 is the AC-1 value with each axis twice as long.
-        assert cubic_units_to_cm3(1.0, 2.0) == pytest.approx(
-            8.0 * CM3_PER_CUBIC_UNIT, rel=1e-12
+        assert cubic_units_to_ml(1.0, 2.0) == pytest.approx(
+            8.0 * ML_PER_CUBIC_UNIT, rel=1e-12
         )
 
 
@@ -100,22 +100,22 @@ class TestFormatCm3:
     def test_a_whole_number_of_millilitres_still_shows_two_decimals(self) -> None:
         # AC-7 / FR-42: the column stays readable because the width of the
         # number never changes with the value.
-        assert format_cm3(8.0) == "8.00"
+        assert format_ml(8.0) == "8.00"
 
     def test_zero_is_written_out_rather_than_left_blank(self) -> None:
         # AC-8: "--" means not measured (FR-45); a measured zero is 0.00.
-        assert format_cm3(0.0) == "0.00"
+        assert format_ml(0.0) == "0.00"
 
     def test_a_five_figure_volume_carries_no_thousands_separator(self) -> None:
         # AC-9 / FR-42: a comma would stop a spreadsheet from reading the
         # pasted text as a number, which is the point of the copy button.
-        assert format_cm3(72216.7225) == "72216.72"
+        assert format_ml(72216.7225) == "72216.72"
 
     def test_a_very_large_volume_does_not_collapse_into_exponent_notation(
         self,
     ) -> None:
         # AC-10 / FR-42: "1.2e+09" would paste as text, not as a number.
-        formatted = format_cm3(1.2e9)
+        formatted = format_ml(1.2e9)
 
         assert "e" not in formatted
         assert formatted == "1200000000.00"
@@ -124,7 +124,7 @@ class TestFormatCm3:
         # AC-11 / L-4: two decimals is the deliberate floor. Reading
         # silicone to a hundredth of a millilitre has no bench meaning, so
         # a speck of a part showing 0.00 is the accepted cost.
-        assert format_cm3(1e-7) == "0.00"
+        assert format_ml(1e-7) == "0.00"
 
 
 class TestUnitsModuleStandsAloneFromBlender:

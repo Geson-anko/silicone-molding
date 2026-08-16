@@ -13,7 +13,7 @@ ends up in ``Scene.silicone_molding`` after a run, and what happens to an
 already stored result when the next run cannot measure the selection.
 
 Expected volumes are spelled as the string the panel displays, i.e. what
-``format_cm3`` returns, because the display is what the spec fixes; the
+``format_ml`` returns, because the display is what the spec fixes; the
 float32 arithmetic behind it is not (§9, tolerance policy). Report wording
 is never asserted -- the spec deliberately leaves it unfixed (§5.4).
 """
@@ -25,20 +25,20 @@ import pytest
 from _helpers import make_cube_mesh
 
 import silicone_molding
-from silicone_molding.core import MODIFIER_NAME, format_cm3
+from silicone_molding.core import MODIFIER_NAME, format_ml
 from silicone_molding.operators import SILMOLD_OT_measure_volume
 
 #: Edge length of the test cubes in Blender units: a 2 cm cube at 1 BU = 1 m.
 CUBE_EDGE_BU = 0.02
 
-#: A 2 cm cube holds 8 ml, so 0.02**3 BU3 * 1e6 cm3/BU3 reads as this.
-ONE_CUBE_CM3 = "8.00"
+#: A 2 cm cube holds 8 mL, so 0.02**3 BU3 * 1e6 mL/BU3 reads as this.
+ONE_CUBE_ML = "8.00"
 
 #: Two of those cubes, reported as a single total (N-4: no breakdown).
-TWO_CUBES_CM3 = "16.00"
+TWO_CUBES_ML = "16.00"
 
 #: One cube stretched to twice its width: abs(det) of the scale is 2.
-STRETCHED_CUBE_CM3 = "16.00"
+STRETCHED_CUBE_ML = "16.00"
 
 #: 1 BU = 1 m, the scene scale every expected value above assumes.
 METRE_SCENE_SCALE = 1.0
@@ -50,11 +50,11 @@ MILLIMETRE_SCENE_CUBE_EDGE = 20.0
 #: Wall thickness of the Solidify modifier used to check modifier evaluation.
 WALL_THICKNESS_BU = 0.001
 
-#: The wall of that solidified cube, in cm3. Offset 1.0 with Even Thickness
+#: The wall of that solidified cube, in mL. Offset 1.0 with Even Thickness
 #: grows the shell outwards by the full thickness on each side, so the wall is
-#: (0.02 + 2 * 0.001)**3 - 0.02**3 = 2.648e-6 BU3, i.e. 2.648 cm3. The bare
-#: cube would read ONE_CUBE_CM3 instead.
-SOLIDIFIED_WALL_CM3 = "2.65"
+#: (0.02 + 2 * 0.001)**3 - 0.02**3 = 2.648e-6 BU3, i.e. 2.648 mL. The bare
+#: cube would read ONE_CUBE_ML instead.
+SOLIDIFIED_WALL_ML = "2.65"
 
 #: Signature of the ``add_object`` factory fixture.
 AddObject = Callable[..., bpy.types.Object]
@@ -120,7 +120,7 @@ def settings(registered: None) -> Iterator[bpy.types.PropertyGroup]:
     unit_settings.scale_length = METRE_SCENE_SCALE
 
     props = bpy.context.scene.silicone_molding
-    props.volume_cm3 = 0.0
+    props.volume_ml = 0.0
     props.volume_measured = False
 
     yield props
@@ -222,7 +222,7 @@ class TestWhatAMeasurementStores:
 
         assert result == {"FINISHED"}
         assert settings.volume_measured
-        assert format_cm3(settings.volume_cm3) == ONE_CUBE_CM3
+        assert format_ml(settings.volume_ml) == ONE_CUBE_ML
 
     def test_two_cubes_are_stored_as_a_single_total(
         self, add_object: AddObject, settings: bpy.types.PropertyGroup
@@ -234,7 +234,7 @@ class TestWhatAMeasurementStores:
 
         bpy.ops.silicone_molding.measure_volume()
 
-        assert format_cm3(settings.volume_cm3) == TWO_CUBES_CM3
+        assert format_ml(settings.volume_ml) == TWO_CUBES_ML
 
     def test_non_mesh_objects_in_the_selection_are_skipped_silently(
         self, add_object: AddObject, settings: bpy.types.PropertyGroup
@@ -250,7 +250,7 @@ class TestWhatAMeasurementStores:
         result = bpy.ops.silicone_molding.measure_volume()
 
         assert result == {"FINISHED"}
-        assert format_cm3(settings.volume_cm3) == TWO_CUBES_CM3
+        assert format_ml(settings.volume_ml) == TWO_CUBES_ML
 
     def test_a_millimetre_scene_reports_the_same_physical_amount(
         self, add_object: AddObject, settings: bpy.types.PropertyGroup
@@ -264,7 +264,7 @@ class TestWhatAMeasurementStores:
 
         bpy.ops.silicone_molding.measure_volume()
 
-        assert format_cm3(settings.volume_cm3) == ONE_CUBE_CM3
+        assert format_ml(settings.volume_ml) == ONE_CUBE_ML
 
     def test_a_stretched_cube_is_measured_at_its_world_size(
         self, add_object: AddObject, settings: bpy.types.PropertyGroup
@@ -276,7 +276,7 @@ class TestWhatAMeasurementStores:
 
         bpy.ops.silicone_molding.measure_volume()
 
-        assert format_cm3(settings.volume_cm3) == STRETCHED_CUBE_CM3
+        assert format_ml(settings.volume_ml) == STRETCHED_CUBE_ML
 
     def test_a_mirrored_cube_is_measured_as_a_positive_volume(
         self, add_object: AddObject, settings: bpy.types.PropertyGroup
@@ -288,7 +288,7 @@ class TestWhatAMeasurementStores:
 
         bpy.ops.silicone_molding.measure_volume()
 
-        assert format_cm3(settings.volume_cm3) == STRETCHED_CUBE_CM3
+        assert format_ml(settings.volume_ml) == STRETCHED_CUBE_ML
 
     def test_an_unapplied_modifier_is_included_in_the_measurement(
         self, add_object: AddObject, settings: bpy.types.PropertyGroup
@@ -304,7 +304,7 @@ class TestWhatAMeasurementStores:
 
         bpy.ops.silicone_molding.measure_volume()
 
-        assert format_cm3(settings.volume_cm3) == SOLIDIFIED_WALL_CM3
+        assert format_ml(settings.volume_ml) == SOLIDIFIED_WALL_ML
 
     def test_measuring_the_same_selection_twice_stores_the_same_value(
         self, add_object: AddObject, settings: bpy.types.PropertyGroup
@@ -313,11 +313,11 @@ class TestWhatAMeasurementStores:
         # not change between the two presses.
         add_object("Cube")
         bpy.ops.silicone_molding.measure_volume()
-        first_reading = settings.volume_cm3
+        first_reading = settings.volume_ml
 
         bpy.ops.silicone_molding.measure_volume()
 
-        assert settings.volume_cm3 == first_reading
+        assert settings.volume_ml == first_reading
 
     def test_measuring_leaves_the_selected_geometry_untouched(
         self, add_object: AddObject, settings: bpy.types.PropertyGroup

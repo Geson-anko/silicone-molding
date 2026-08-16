@@ -44,9 +44,9 @@ EXPECTED_EXTENT = CUBE_SIZE / 2 + THICKNESS
 TOLERANCE = 1e-5
 
 # A 2 cm cube for the volume checks: 0.02 BU on a side with the default scene
-# scale of 1 BU = 1 m, which is 8 cm3, i.e. 8 ml.
+# scale of 1 BU = 1 m, which is 8 mL.
 MEASURED_CUBE_SIZE = 0.02
-EXPECTED_VOLUME_CM3 = 8.0
+EXPECTED_VOLUME_ML = 8.0
 # Mesh coordinates and the scene's FloatProperty are both float32, so the
 # volume lands within about 1e-5 relative of the analytic value.
 VOLUME_TOLERANCE = 1e-4
@@ -99,7 +99,7 @@ def check_scene_properties() -> None:
     for name in (
         "solidify_thickness_mm",
         "solidify_flip",
-        "volume_cm3",
+        "volume_ml",
         "volume_measured",
     ):
         assert name in names, f"{name} is missing; scene settings have {sorted(names)}"
@@ -180,9 +180,9 @@ def check_measuring_a_closed_cube_stores_its_millilitres() -> None:
 
     settings = bpy.context.scene.silicone_molding
     assert settings.volume_measured, "volume_measured stayed false after a good run"
-    difference = abs(settings.volume_cm3 - EXPECTED_VOLUME_CM3)
+    difference = abs(settings.volume_ml - EXPECTED_VOLUME_ML)
     assert difference <= VOLUME_TOLERANCE, (
-        f"volume_cm3 is {settings.volume_cm3}, expected {EXPECTED_VOLUME_CM3} "
+        f"volume_ml is {settings.volume_ml}, expected {EXPECTED_VOLUME_ML} "
         f"(tol {VOLUME_TOLERANCE})"
     )
 

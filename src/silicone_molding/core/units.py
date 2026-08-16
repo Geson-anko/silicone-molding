@@ -2,8 +2,8 @@
 
 The addon fixes the units it speaks to the user regardless of the
 scene's unit settings: wall thickness is authored in millimetres and
-volume is reported in cubic centimetres (= millilitres), because those
-are the languages of 3D printing and of casting silicone. Blender stores
+volume is reported in millilitres, because those are the languages of 3D
+printing and of casting silicone. Blender stores
 both in its own unit system, so the conversions between the two live
 here, together with the single decimal format that defines what a volume
 looks like on screen and in the clipboard.
@@ -29,10 +29,10 @@ def mm_to_units(mm: float, scale_length: float) -> float:
     return mm / 1000 / scale_length
 
 
-def cubic_units_to_cm3(volume: float, scale_length: float) -> float:
-    """Convert a volume in cubic Blender units to cubic centimetres.
+def cubic_units_to_ml(volume: float, scale_length: float) -> float:
+    """Convert a volume in cubic Blender units to millilitres.
 
-    One cubic centimetre is one millilitre, which is the unit written on
+    A millilitre is one cubic centimetre, and it is the unit written on
     measuring cups and on tins of casting silicone. The factor is cubed
     because a volume scales with the third power of a length: one Blender
     unit is ``scale_length`` metres, hence ``scale_length * 100``
@@ -46,13 +46,13 @@ def cubic_units_to_cm3(volume: float, scale_length: float) -> float:
             either way, so no zero guard is needed here.
 
     Returns:
-        The same volume expressed in cubic centimetres (millilitres).
+        The same volume expressed in millilitres.
     """
     return volume * (scale_length * 100.0) ** 3
 
 
-def format_cm3(volume_cm3: float) -> str:
-    """Format a volume in cubic centimetres for display and for copying.
+def format_ml(volume_ml: float) -> str:
+    """Format a volume in millilitres for display and for copying.
 
     This is the one place that decides what a measured volume looks like:
     the panel shows this string and the clipboard receives the very same
@@ -62,10 +62,10 @@ def format_cm3(volume_cm3: float) -> str:
     spreadsheet as a number.
 
     Args:
-        volume_cm3: Volume in cubic centimetres.
+        volume_ml: Volume in millilitres.
 
     Returns:
         The volume as a plain decimal with exactly two fractional
         digits, without a unit suffix.
     """
-    return f"{volume_cm3:.2f}"
+    return f"{volume_ml:.2f}"

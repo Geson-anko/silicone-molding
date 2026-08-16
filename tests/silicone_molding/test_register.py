@@ -84,14 +84,14 @@ class TestMeasurementSettings:
         # are written into users' .blend files and read back from them, and
         # the panel addresses them by name.
         properties = bpy.context.scene.silicone_molding.bl_rna.properties
-        assert "volume_cm3" in properties
+        assert "volume_ml" in properties
         assert "volume_measured" in properties
 
     def test_the_volume_is_not_declared_as_a_volume_property(
         self, registered: None
     ) -> None:
         # AC-58 / FR-29: unit="VOLUME" would re-display the value in the
-        # scene's unit settings, breaking "always shown in cm3" (FR-38). Same
+        # scene's unit settings, breaking "always shown in mL" (FR-38). Same
         # reasoning as the millimetre thickness above.
         properties = bpy.context.scene.silicone_molding.bl_rna.properties
-        assert properties["volume_cm3"].unit == "NONE"
+        assert properties["volume_ml"].unit == "NONE"
