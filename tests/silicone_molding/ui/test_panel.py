@@ -7,10 +7,9 @@ The sidebar is one header-only parent panel with two collapsible children,
 ``Measurement`` above ``Processing`` (FR-3, FR-4). What a background run can
 state about that structure is the class-level declaration: who the parent
 is, in which order the children are drawn, and that neither child hides or
-collapses itself. The contents of ``draw`` -- the two branches of the result
-row and the fact that it measures nothing (FR-25, FR-48) -- cannot be
-reached without a window, and are covered by the review checklist (§10.4)
-and the manual checks AC-71 -- AC-74.
+collapses itself. The contents of ``draw`` cannot be reached without a
+window, so the volume result and mixture-table layout remain part of the
+manual Blender check.
 
 That registration actually accepts this parent/child arrangement (FR-8) is
 asserted in ``tests/silicone_molding/test_register.py``.

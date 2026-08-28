@@ -16,6 +16,7 @@ import pytest
 
 from silicone_molding.core import (
     cubic_units_to_ml,
+    format_grams,
     format_ml,
     mm_to_units,
     units as units_module,
@@ -125,6 +126,14 @@ class TestFormatCm3:
         # silicone to a hundredth of a millilitre has no bench meaning, so
         # a speck of a part showing 0.00 is the accepted cost.
         assert format_ml(1e-7) == "0.00"
+
+
+class TestFormatGrams:
+    def test_grams_always_have_two_decimal_places(self) -> None:
+        assert format_grams(55.0) == "55.00"
+
+    def test_grams_have_no_unit_or_thousands_separator(self) -> None:
+        assert format_grams(12345.678) == "12345.68"
 
 
 class TestUnitsModuleStandsAloneFromBlender:
