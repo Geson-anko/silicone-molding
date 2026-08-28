@@ -1,0 +1,92 @@
+"""Operator that exports the selected meshes with fixed STL settings."""
+
+import os
+from typing import cast, override
+
+import bpy
+from bpy.props import BoolProperty, StringProperty
+
+from .solidify import OperatorReturn
+
+_STL_EXTENSION = ".stl"
+_EXPORT_SCALE = 1000.0
+
+
+def _selected_meshes(context: bpy.types.Context) -> list[bpy.types.Object]:
+    """Return the selected mesh objects available in this context."""
+    return [obj for obj in (context.selected_objects or ()) if obj.type == "MESH"]
+
+
+def _default_filepath(context: bpy.types.Context) -> str:
+    """Build the initial STL path from the active selected mesh's name."""
+    meshes = _selected_meshes(context)
+    active = context.active_object
+    source = active if active in meshes else meshes[0]
+    filename = f"{source.name}{_STL_EXTENSION}"
+    return os.path.join(bpy.path.abspath("//"), filename)
+
+
+class SILMOLD_OT_export_stl(bpy.types.Operator):
+    """Export the selected meshes as a millimetre-scaled STL file."""
+
+    bl_idname = "silicone_molding.export_stl"
+    bl_label = "Export STL"
+    bl_description = (
+        "Export only the selected meshes with modifiers applied and scale 1000"
+    )
+
+    filepath: StringProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="File Path",
+        subtype="FILE_PATH",
+        options={"SKIP_SAVE"},
+    )
+    filter_glob: StringProperty(  # pyright: ignore[reportInvalidTypeForm]
+        default="*.stl",
+        options={"HIDDEN"},
+    )
+    check_existing: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
+        default=True,
+        options={"HIDDEN"},
+    )
+
+    @classmethod
+    @override
+    def poll(cls, context: bpy.types.Context) -> bool:
+        return context.mode == "OBJECT" and len(_selected_meshes(context)) > 0
+
+    @override
+    def invoke(
+        self, context: bpy.types.Context, event: bpy.types.Event
+    ) -> OperatorReturn:
+        self.filepath = _default_filepath(  # pyright: ignore[reportUnknownMemberType]
+            context
+        )
+        context.window_manager.fileselect_add(self)
+        return {"RUNNING_MODAL"}
+
+    @override
+    def execute(self, context: bpy.types.Context) -> OperatorReturn:
+        # The user can change the selection or mode while the file browser is
+        # open, so validate the context again when they confirm the path.
+        if not self.poll(context):
+            self.report({"ERROR"}, "Select at least one mesh in Object Mode")
+            return {"CANCELLED"}
+
+        filepath = cast(
+            str,
+            self.filepath,  # pyright: ignore[reportUnknownMemberType]
+        )
+        if not filepath:
+            self.report({"ERROR"}, "Choose an STL file path")
+            return {"CANCELLED"}
+
+        filepath = bpy.path.ensure_ext(filepath, _STL_EXTENSION)
+        result = bpy.ops.wm.stl_export(
+            filepath=filepath,
+            export_selected_objects=True,
+            apply_modifiers=True,
+            global_scale=_EXPORT_SCALE,
+        )
+        if "FINISHED" in result:
+            self.report({"INFO"}, f"Exported STL: {os.path.basename(filepath)}")
+        return result

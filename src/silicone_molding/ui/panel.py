@@ -8,6 +8,7 @@ from ..core import format_ml
 from ..operators import (
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_copy_value,
+    SILMOLD_OT_export_stl,
     SILMOLD_OT_measure_volume,
     SILMOLD_OT_solidify,
 )
@@ -98,3 +99,5 @@ class SILMOLD_PT_processing(bpy.types.Panel):
         layout.prop(props, "solidify_flip")
         layout.operator(SILMOLD_OT_solidify.bl_idname, icon="MOD_SOLIDIFY")
         layout.operator(SILMOLD_OT_apply_solidify.bl_idname)
+        layout.separator()
+        layout.operator(SILMOLD_OT_export_stl.bl_idname, icon="EXPORT")
