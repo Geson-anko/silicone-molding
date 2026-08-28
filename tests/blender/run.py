@@ -16,8 +16,11 @@ Failures raise ``AssertionError``; the exit code is set explicitly at the
 end because Blender swallows tracebacks from ``--python`` scripts.
 """
 
+import struct
 import sys
+import tempfile
 import traceback
+from pathlib import Path
 
 import addon_utils
 import bpy
@@ -54,6 +57,15 @@ VOLUME_TOLERANCE = 1e-4
 # A value in the shape the panel produces: two decimals, no unit, no commas.
 DISPLAYED_VALUE = "8.00"
 
+# STL export checks use a 2x2 plane, a one-unit Solidify modifier, and the
+# operator's fixed 1000x scale. The exported bounds must therefore span 2000
+# on X/Y and 1000 on Z.
+STL_PLANE_HALF_SIZE = 1.0
+STL_SOLIDIFY_THICKNESS = 1.0
+STL_EXPORT_SCALE = 1000.0
+STL_FAR_OBJECT_X = 10.0
+STL_TOLERANCE = 1e-4
+
 _HALF = MEASURED_CUBE_SIZE / 2.0
 # A cube with its top face left off: the four edges around the hole are
 # boundary edges, so this mesh has no defined volume.
@@ -85,7 +97,13 @@ def check_addon_is_enabled() -> None:
     # `dir` lists the operators Blender actually resolved; `hasattr` on a
     # `bpy.ops` namespace is always true, so it would prove nothing.
     operators = dir(bpy.ops.silicone_molding)
-    for name in ("solidify", "apply_solidify", "measure_volume", "copy_value"):
+    for name in (
+        "solidify",
+        "apply_solidify",
+        "measure_volume",
+        "copy_value",
+        "export_stl",
+    ):
         assert (
             name in operators
         ), f"operator {name} is missing; silicone_molding has {sorted(operators)}"
@@ -230,6 +248,78 @@ def check_copying_a_value_finishes() -> None:
     assert result == {"FINISHED"}, f"copy_value returned {result}"
 
 
+def _binary_stl_vertices(path: Path) -> list[tuple[float, float, float]]:
+    """Read triangle vertices from Blender's default binary STL output."""
+    payload = path.read_bytes()
+    triangle_count = struct.unpack_from("<I", payload, 80)[0]
+    assert len(payload) == 84 + triangle_count * 50, "malformed binary STL"
+
+    vertices: list[tuple[float, float, float]] = []
+    for index in range(triangle_count):
+        coordinates = struct.unpack_from("<9f", payload, 84 + index * 50 + 12)
+        vertices.extend(
+            [
+                (coordinates[0], coordinates[1], coordinates[2]),
+                (coordinates[3], coordinates[4], coordinates[5]),
+                (coordinates[6], coordinates[7], coordinates[8]),
+            ]
+        )
+    return vertices
+
+
+def check_export_stl_uses_the_fixed_settings() -> None:
+    """The installed operator must export selection, modifiers, and 1000x."""
+    _deselect_everything()
+    vertices = [
+        (-STL_PLANE_HALF_SIZE, -STL_PLANE_HALF_SIZE, 0.0),
+        (STL_PLANE_HALF_SIZE, -STL_PLANE_HALF_SIZE, 0.0),
+        (STL_PLANE_HALF_SIZE, STL_PLANE_HALF_SIZE, 0.0),
+        (-STL_PLANE_HALF_SIZE, STL_PLANE_HALF_SIZE, 0.0),
+    ]
+    faces = [(0, 1, 2, 3)]
+
+    selected_mesh = bpy.data.meshes.new("ExportSelectedMesh")
+    selected_mesh.from_pydata(vertices, [], faces)
+    selected_mesh.update()
+    selected = bpy.data.objects.new("ExportSelected", selected_mesh)
+    bpy.context.scene.collection.objects.link(selected)
+    selected.select_set(True)
+    bpy.context.view_layer.objects.active = selected
+    modifier = selected.modifiers.new("Export Solidify", "SOLIDIFY")
+    modifier.thickness = STL_SOLIDIFY_THICKNESS
+    modifier.offset = 1.0
+
+    unselected_mesh = bpy.data.meshes.new("ExportUnselectedMesh")
+    unselected_mesh.from_pydata(vertices, [], faces)
+    unselected_mesh.update()
+    unselected = bpy.data.objects.new("ExportUnselected", unselected_mesh)
+    bpy.context.scene.collection.objects.link(unselected)
+    unselected.location.x = STL_FAR_OBJECT_X
+    unselected.select_set(False)
+
+    with tempfile.TemporaryDirectory() as directory:
+        requested_path = Path(directory) / "ExportSelected"
+        result = bpy.ops.silicone_molding.export_stl(filepath=str(requested_path))
+        output_path = requested_path.with_suffix(".stl")
+        assert result == {"FINISHED"}, f"export_stl returned {result}"
+        assert output_path.is_file(), f"STL was not written to {output_path}"
+
+        exported = _binary_stl_vertices(output_path)
+
+    x_coordinates = [vertex[0] for vertex in exported]
+    y_coordinates = [vertex[1] for vertex in exported]
+    z_coordinates = [vertex[2] for vertex in exported]
+    expected_min = -STL_EXPORT_SCALE
+    expected_max = STL_EXPORT_SCALE
+    assert abs(min(x_coordinates) - expected_min) <= STL_TOLERANCE
+    assert abs(max(x_coordinates) - expected_max) <= STL_TOLERANCE
+    assert abs(min(y_coordinates) - expected_min) <= STL_TOLERANCE
+    assert abs(max(y_coordinates) - expected_max) <= STL_TOLERANCE
+    z_extent = max(z_coordinates) - min(z_coordinates)
+    assert abs(z_extent - STL_EXPORT_SCALE) <= STL_TOLERANCE
+    assert modifier.name in selected.modifiers, "export applied the source modifier"
+
+
 CHECKS = (
     check_addon_is_enabled,
     check_scene_properties,
@@ -237,6 +327,7 @@ CHECKS = (
     check_measuring_a_closed_cube_stores_its_millilitres,
     check_an_open_mesh_clears_the_stored_measurement,
     check_copying_a_value_finishes,
+    check_export_stl_uses_the_fixed_settings,
 )
 
 

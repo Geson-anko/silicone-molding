@@ -9,6 +9,7 @@ import bpy
 from .operators import (
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_copy_value,
+    SILMOLD_OT_export_stl,
     SILMOLD_OT_measure_volume,
     SILMOLD_OT_solidify,
 )
@@ -30,6 +31,7 @@ _CLASSES = (
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_measure_volume,
     SILMOLD_OT_copy_value,
+    SILMOLD_OT_export_stl,
     SILMOLD_PT_main,
     SILMOLD_PT_measurement,
     SILMOLD_PT_processing,
