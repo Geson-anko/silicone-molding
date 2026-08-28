@@ -7,13 +7,18 @@ Packaged as a Blender Extension: metadata lives in
 import bpy
 
 from .operators import (
+    SILMOLD_OT_add_mixture_part,
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_copy_value,
     SILMOLD_OT_export_stl,
     SILMOLD_OT_measure_volume,
+    SILMOLD_OT_move_mixture_parts,
+    SILMOLD_OT_remove_mixture_parts,
+    SILMOLD_OT_select_mixture_part,
     SILMOLD_OT_solidify,
 )
 from .ui import (
+    SiliconeMoldingMixturePart,
     SiliconeMoldingProperties,
     SILMOLD_PT_main,
     SILMOLD_PT_measurement,
@@ -26,12 +31,17 @@ from .ui import (
 # register() as a whole. The Scene pointer is attached after the loop, since
 # PointerProperty needs SiliconeMoldingProperties already registered.
 _CLASSES = (
+    SiliconeMoldingMixturePart,
     SiliconeMoldingProperties,
     SILMOLD_OT_solidify,
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_measure_volume,
     SILMOLD_OT_copy_value,
     SILMOLD_OT_export_stl,
+    SILMOLD_OT_add_mixture_part,
+    SILMOLD_OT_remove_mixture_parts,
+    SILMOLD_OT_move_mixture_parts,
+    SILMOLD_OT_select_mixture_part,
     SILMOLD_PT_main,
     SILMOLD_PT_measurement,
     SILMOLD_PT_processing,

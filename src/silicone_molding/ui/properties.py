@@ -1,9 +1,47 @@
 """Scene-level settings shared by the add-on's operators and panels."""
 
 import bpy
-from bpy.props import BoolProperty, FloatProperty
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    FloatProperty,
+    IntProperty,
+    StringProperty,
+)
 
 from ..core import MIN_THICKNESS_MM
+
+_MIN_DENSITY_G_PER_ML = 0.001
+_MIN_MIXTURE_RATIO = 0.001
+
+
+class SiliconeMoldingMixturePart(bpy.types.PropertyGroup):
+    """One manually entered part in the silicone mixture table."""
+
+    enabled: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Enabled",
+        description="Include this part in mixture totals",
+        default=True,
+    )
+
+    selected: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Selected",
+        description="Include this part in the selected subtotal",
+        default=False,
+    )
+
+    part_name: StringProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Name",
+        default="Part",
+    )
+
+    # Deliberately no ``unit="VOLUME"``: mixture inputs are always mL.
+    volume_ml: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Volume (mL)",
+        default=0.0,
+        min=0.0,
+        precision=2,
+    )
 
 
 class SiliconeMoldingProperties(bpy.types.PropertyGroup):
@@ -45,4 +83,55 @@ class SiliconeMoldingProperties(bpy.types.PropertyGroup):
         name="Measured",
         description="Whether Volume (mL) holds the result of a measurement",
         default=False,
+    )
+
+    mixture_use_shared_density: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Same Density for A and B",
+        description="Use part A's density for both parts",
+        default=True,
+    )
+
+    mixture_density_a_g_per_ml: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Density A (g/mL)",
+        default=1.1,
+        min=_MIN_DENSITY_G_PER_ML,
+        soft_max=5.0,
+        precision=3,
+    )
+
+    mixture_density_b_g_per_ml: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Density B (g/mL)",
+        default=1.1,
+        min=_MIN_DENSITY_G_PER_ML,
+        soft_max=5.0,
+        precision=3,
+    )
+
+    mixture_ratio_a: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Ratio A",
+        description="Relative weight of part A",
+        default=1.0,
+        min=_MIN_MIXTURE_RATIO,
+        soft_max=100.0,
+        precision=3,
+    )
+
+    mixture_ratio_b: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Ratio B",
+        description="Relative weight of part B",
+        default=1.0,
+        min=_MIN_MIXTURE_RATIO,
+        soft_max=100.0,
+        precision=3,
+    )
+
+    mixture_parts: CollectionProperty(  # pyright: ignore[reportInvalidTypeForm]
+        type=SiliconeMoldingMixturePart,
+    )
+
+    mixture_selection_anchor: IntProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Mixture Selection Anchor",
+        default=-1,
+        min=-1,
+        options={"HIDDEN", "SKIP_SAVE"},
     )
