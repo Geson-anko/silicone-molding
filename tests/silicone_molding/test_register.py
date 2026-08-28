@@ -39,6 +39,10 @@ class TestRegistration:
         assert "measure_volume" in operators
         assert "copy_value" in operators
 
+    def test_the_stl_export_operator_becomes_callable(self, registered: None) -> None:
+        operators = dir(bpy.ops.silicone_molding)
+        assert "export_stl" in operators
+
     def test_the_sidebar_registers_as_a_parent_with_two_sub_panels(
         self, registered: None
     ) -> None:
