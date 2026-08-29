@@ -117,6 +117,7 @@ def check_scene_properties() -> None:
     for name in (
         "solidify_thickness_mm",
         "solidify_flip",
+        "solidify_even_thickness",
         "volume_ml",
         "volume_measured",
     ):
@@ -143,6 +144,7 @@ def check_solidify_then_apply_gives_a_double_walled_cube() -> None:
     settings = bpy.context.scene.silicone_molding
     settings.solidify_thickness_mm = THICKNESS_MM
     settings.solidify_flip = False
+    settings.solidify_even_thickness = True
 
     result = bpy.ops.silicone_molding.solidify()
     assert result == {"FINISHED"}, f"solidify returned {result}"
