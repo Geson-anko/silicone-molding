@@ -97,7 +97,7 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 
 現状の実装は以下の 3 機能。造形機能の本体はこれから。
 
-- **Solidify**（Processing）— `silicone_molding.solidify` で選択メッシュにアドオン専用の Solidify モディファイアを付与・更新し、`silicone_molding.apply_solidify` でそのモディファイアだけをメッシュに焼き込む。パラメータは壁厚（mm 入力）と方向反転の 2 つ
+- **Solidify**（Processing）— `silicone_molding.solidify` で選択メッシュにアドオン専用の Solidify モディファイアを付与・更新し、`silicone_molding.apply_solidify` でそのモディファイアだけをメッシュに焼き込む。パラメータは壁厚（mm 入力）、方向反転、均一な厚み
 - **体積計測**（Measurement）— `silicone_molding.measure_volume` が選択メッシュの体積をモディファイア込みのワールド実寸で合計し、mL で `Scene.silicone_molding` に保存する（ボタン押下時のスナップショット。閉じていないメッシュがあれば数値を出さずエラー）。`silicone_molding.copy_value` は渡された文字列をクリップボードへコピーするだけの汎用オペレータで、体積という概念を持たない
 - **STL 出力**（Processing）— `silicone_molding.export_stl` がアクティブオブジェクト名を既定名にして保存先選択を開き、選択物のみ・モディファイア適用・1000 倍の固定設定で STL を出力する
 
