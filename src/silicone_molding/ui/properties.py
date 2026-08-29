@@ -27,6 +27,12 @@ class SiliconeMoldingProperties(bpy.types.PropertyGroup):
         default=False,
     )
 
+    solidify_even_thickness: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Even Thickness",
+        description="Keep the requested wall thickness around corners",
+        default=True,
+    )
+
     # Deliberately no ``unit="VOLUME"``, for the same reason as above: it
     # would make Blender render the value in the scene's unit settings, while
     # this add-on always reports volumes in millilitres.

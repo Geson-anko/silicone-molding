@@ -42,7 +42,12 @@ class SILMOLD_OT_solidify(bpy.types.Operator):
         )
         objects = _selected_meshes(context)
         for obj in objects:
-            ensure_solidify(obj, thickness, flip=props.solidify_flip)
+            ensure_solidify(
+                obj,
+                thickness,
+                flip=props.solidify_flip,
+                even_thickness=props.solidify_even_thickness,
+            )
 
         self.report({"INFO"}, f"Solidified {len(objects)} object(s)")
         return {"FINISHED"}
