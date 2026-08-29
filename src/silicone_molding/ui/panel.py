@@ -17,6 +17,7 @@ from ..operators import (
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_copy_value,
     SILMOLD_OT_export_stl,
+    SILMOLD_OT_inherit_shape,
     SILMOLD_OT_measure_volume,
     SILMOLD_OT_move_mixture_parts,
     SILMOLD_OT_remove_mixture_parts,
@@ -454,5 +455,6 @@ class SILMOLD_PT_processing(bpy.types.Panel):
                 text=label,
             )
             button.operation = operation
+        layout.operator(SILMOLD_OT_inherit_shape.bl_idname, icon="MOD_BOOLEAN")
         layout.separator()
         layout.operator(SILMOLD_OT_export_stl.bl_idname, icon="EXPORT")
