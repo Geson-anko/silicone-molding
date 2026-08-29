@@ -7,6 +7,7 @@ import pytest
 
 import silicone_molding
 from silicone_molding.ui.panel import (
+    _filter_mixture_parts_by_name,
     _included_mixture_volume,
     _mixture_breakdown,
 )
@@ -238,3 +239,18 @@ class TestTotals:
         assert _included_mixture_volume(settings, selected_only=True) == pytest.approx(
             10.0
         )
+
+
+class TestNameFilter:
+    def test_part_names_are_matched_case_insensitively_by_substring(
+        self, settings: bpy.types.PropertyGroup
+    ) -> None:
+        _add_parts(settings, "Main Body", "LID", "Body Support")
+
+        flags = _filter_mixture_parts_by_name(
+            "body",
+            1,
+            settings.mixture_parts,
+        )
+
+        assert flags == [1, 0, 1]
