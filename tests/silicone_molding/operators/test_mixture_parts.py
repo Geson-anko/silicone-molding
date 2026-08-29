@@ -49,6 +49,19 @@ def _selected_indices(props: bpy.types.PropertyGroup) -> list[int]:
     return [index for index, part in enumerate(props.mixture_parts) if part.selected]
 
 
+class TestOpenCalculator:
+    def test_direct_execution_finishes_without_creating_a_window(
+        self, settings: bpy.types.PropertyGroup
+    ) -> None:
+        del settings
+        windows_before = len(bpy.context.window_manager.windows)
+
+        result = bpy.ops.silicone_molding.open_mixture_calculator()
+
+        assert result == {"FINISHED"}
+        assert len(bpy.context.window_manager.windows) == windows_before
+
+
 class TestAddAndRemove:
     def test_add_creates_the_documented_default_row(
         self, settings: bpy.types.PropertyGroup

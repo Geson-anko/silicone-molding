@@ -48,6 +48,7 @@ class TestRegistration:
     ) -> None:
         operators = dir(bpy.ops.silicone_molding)
         for name in (
+            "open_mixture_calculator",
             "add_mixture_part",
             "remove_mixture_parts",
             "move_mixture_parts",

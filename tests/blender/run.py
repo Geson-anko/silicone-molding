@@ -103,6 +103,7 @@ def check_addon_is_enabled() -> None:
         "measure_volume",
         "copy_value",
         "export_stl",
+        "open_mixture_calculator",
         "add_mixture_part",
         "remove_mixture_parts",
         "move_mixture_parts",
