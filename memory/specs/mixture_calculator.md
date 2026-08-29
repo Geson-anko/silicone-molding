@@ -3,7 +3,7 @@
 ## 目的
 
 パーツごとの必要体積を手入力し、2液型シリコーンの必要重量とA剤・B剤の
-体積／重量をMeasurementパネル内で即時に確認できるようにする。
+体積／重量を専用の計算表で即時に確認できるようにする。
 
 ## 計算
 
@@ -35,10 +35,11 @@ A/B両方へ用いるが、非表示のB密度値は保持する。
 ## UIと行操作
 
 既存の体積計測は変更せず、Measurementパネルの下部へMixture Calculatorを
-追加する。通常幅のNパネルで各パーツを2段表示する。
+開くボタンを追加する。ボタンは新しいBlenderウィンドウを作成し、その中に
+横幅900pxの専用計算表を開く。各パーツを次の1行で表示する。
 
-1. 選択、Enabled、Name、Volume (mL)
-2. Weight、A Volume、B Volume、A Weight、B Weight
+選択、Enabled、Name、Volume (mL)、Weight (g)、A Volume (mL)、
+B Volume (mL)、A Weight (g)、B Weight (g)
 
 無効行も入力は編集できるが、派生表示をグレー化して集計から除外する。
 選択行が1件以上ある場合だけ、選択かつ有効な行の `Selected` 小計を表示する。
