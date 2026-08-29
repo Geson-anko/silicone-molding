@@ -43,6 +43,8 @@ VolumeB = WeightB / DensityB
 B Volume (mL)、A Weight (g)、B Weight (g)
 
 無効行も入力は編集できるが、派生表示をグレー化して集計から除外する。
+列幅は固定値にせず全体幅へ追従する比率配分とし、選択とEnabledを狭く、Nameを
+最も広く、数値列を同じ比率にする。
 選択行が1件以上ある場合だけ、選択かつ有効な行の `Selected` 小計を表示する。
 最後の `Total` は常に全有効行を集計する。
 
