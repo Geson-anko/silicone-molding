@@ -43,6 +43,10 @@ class TestRegistration:
         operators = dir(bpy.ops.silicone_molding)
         assert "export_stl" in operators
 
+    def test_the_boolean_operator_becomes_callable(self, registered: None) -> None:
+        operators = dir(bpy.ops.silicone_molding)
+        assert "add_boolean" in operators
+
     def test_the_inherit_shape_operator_becomes_callable(
         self, registered: None
     ) -> None:
@@ -124,6 +128,29 @@ class TestMeasurementSettings:
         # reasoning as the millimetre thickness above.
         properties = bpy.context.scene.silicone_molding.bl_rna.properties
         assert properties["volume_ml"].unit == "NONE"
+
+
+class TestBooleanSettings:
+    @pytest.mark.api_contract
+    def test_scene_settings_carry_the_boolean_properties(
+        self, registered: None
+    ) -> None:
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert "boolean_operand" in properties
+        assert "boolean_solver" in properties
+
+    def test_exact_is_the_default_boolean_solver(self, registered: None) -> None:
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert properties["boolean_solver"].default == "EXACT"
+
+    def test_all_documented_boolean_solvers_are_available(
+        self, registered: None
+    ) -> None:
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        identifiers = {
+            item.identifier for item in properties["boolean_solver"].enum_items
+        }
+        assert identifiers == {"MANIFOLD", "EXACT", "FLOAT"}
 
 
 class TestMixtureSettings:
