@@ -5,6 +5,7 @@ Packaged as a Blender Extension: metadata lives in
 """
 
 import bpy
+from bpy.app.handlers import persistent
 
 from .operators import (
     SILMOLD_OT_add_mixture_part,
@@ -54,6 +55,15 @@ _CLASSES = (
 _SCENE_ATTR = "silicone_molding"
 
 
+@persistent
+def _reset_mixture_selection_anchors(_unused: object) -> None:
+    """Clear the transient Shift-selection anchor after loading a file."""
+    for scene in bpy.data.scenes:
+        props = getattr(scene, _SCENE_ATTR, None)
+        if props is not None:
+            props.mixture_selection_anchor = -1
+
+
 def register() -> None:
     """Register every class and attach the scene-level settings."""
     for cls in _CLASSES:
@@ -63,10 +73,14 @@ def register() -> None:
         _SCENE_ATTR,
         bpy.props.PointerProperty(type=SiliconeMoldingProperties),
     )
+    if _reset_mixture_selection_anchors not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_reset_mixture_selection_anchors)
 
 
 def unregister() -> None:
     """Detach the scene-level settings and unregister every class."""
+    if _reset_mixture_selection_anchors in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_reset_mixture_selection_anchors)
     delattr(bpy.types.Scene, _SCENE_ATTR)
     for cls in reversed(_CLASSES):
         bpy.utils.unregister_class(cls)
