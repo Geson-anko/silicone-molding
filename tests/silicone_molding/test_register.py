@@ -43,6 +43,12 @@ class TestRegistration:
         operators = dir(bpy.ops.silicone_molding)
         assert "export_stl" in operators
 
+    def test_the_inherit_shape_operator_becomes_callable(
+        self, registered: None
+    ) -> None:
+        operators = dir(bpy.ops.silicone_molding)
+        assert "inherit_shape" in operators
+
     def test_the_mixture_table_operators_become_callable(
         self, registered: None
     ) -> None:
