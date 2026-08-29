@@ -103,6 +103,10 @@ def check_addon_is_enabled() -> None:
         "measure_volume",
         "copy_value",
         "export_stl",
+        "add_mixture_part",
+        "remove_mixture_parts",
+        "move_mixture_parts",
+        "select_mixture_part",
     ):
         assert (
             name in operators
@@ -119,8 +123,87 @@ def check_scene_properties() -> None:
         "solidify_flip",
         "volume_ml",
         "volume_measured",
+        "mixture_use_shared_density",
+        "mixture_density_a_g_per_ml",
+        "mixture_density_b_g_per_ml",
+        "mixture_ratio_a",
+        "mixture_ratio_b",
+        "mixture_parts",
+        "mixture_selection_anchor",
+        "mixture_active_index",
     ):
         assert name in names, f"{name} is missing; scene settings have {sorted(names)}"
+
+
+def check_mixture_part_operations() -> None:
+    """The installed add-on must add, select, move, and remove rows."""
+    settings = bpy.context.scene.silicone_molding
+    settings.mixture_parts.clear()
+    for name in ("A", "B", "C", "D"):
+        result = bpy.ops.silicone_molding.add_mixture_part()
+        assert result == {"FINISHED"}, f"add_mixture_part returned {result}"
+        settings.mixture_parts[-1].part_name = name
+
+    bpy.ops.silicone_molding.select_mixture_part(index=1, mode="REPLACE")
+    bpy.ops.silicone_molding.select_mixture_part(index=3, mode="TOGGLE")
+    result = bpy.ops.silicone_molding.move_mixture_parts(direction="UP")
+    assert result == {"FINISHED"}, f"move_mixture_parts returned {result}"
+    assert [part.part_name for part in settings.mixture_parts] == [
+        "B",
+        "A",
+        "D",
+        "C",
+    ]
+
+    result = bpy.ops.silicone_molding.remove_mixture_parts()
+    assert result == {"FINISHED"}, f"remove_mixture_parts returned {result}"
+    assert [part.part_name for part in settings.mixture_parts] == ["A", "C"]
+    assert settings.mixture_selection_anchor == -1
+
+
+def check_mixture_settings_survive_save_and_reload() -> None:
+    """Every saved mixture input must round-trip through a .blend file."""
+    settings = bpy.context.scene.silicone_molding
+    settings.mixture_parts.clear()
+    settings.mixture_use_shared_density = False
+    settings.mixture_density_a_g_per_ml = 1.5
+    settings.mixture_density_b_g_per_ml = 1.0
+    settings.mixture_ratio_a = 3.0
+    settings.mixture_ratio_b = 1.0
+
+    body = settings.mixture_parts.add()
+    body.enabled = True
+    body.selected = False
+    body.part_name = "Body"
+    body.volume_ml = 60.0
+
+    lid = settings.mixture_parts.add()
+    lid.enabled = False
+    lid.selected = True
+    lid.part_name = "Lid"
+    lid.volume_ml = 30.0
+    settings.mixture_selection_anchor = 1
+    settings.mixture_active_index = 1
+
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "mixture-round-trip.blend"
+        result = bpy.ops.wm.save_as_mainfile(filepath=str(path))
+        assert result == {"FINISHED"}, f"save_as_mainfile returned {result}"
+        result = bpy.ops.wm.open_mainfile(filepath=str(path))
+        assert result == {"FINISHED"}, f"open_mainfile returned {result}"
+
+        loaded = bpy.context.scene.silicone_molding
+        assert not loaded.mixture_use_shared_density
+        assert abs(loaded.mixture_density_a_g_per_ml - 1.5) <= TOLERANCE
+        assert abs(loaded.mixture_density_b_g_per_ml - 1.0) <= TOLERANCE
+        assert abs(loaded.mixture_ratio_a - 3.0) <= TOLERANCE
+        assert abs(loaded.mixture_ratio_b - 1.0) <= TOLERANCE
+        assert [part.part_name for part in loaded.mixture_parts] == ["Body", "Lid"]
+        assert [part.enabled for part in loaded.mixture_parts] == [True, False]
+        assert [part.selected for part in loaded.mixture_parts] == [False, True]
+        assert [part.volume_ml for part in loaded.mixture_parts] == [60.0, 30.0]
+        assert loaded.mixture_selection_anchor == -1
+        assert loaded.mixture_active_index == -1
 
 
 def check_solidify_then_apply_gives_a_double_walled_cube() -> None:
@@ -323,11 +406,14 @@ def check_export_stl_uses_the_fixed_settings() -> None:
 CHECKS = (
     check_addon_is_enabled,
     check_scene_properties,
+    check_mixture_part_operations,
     check_solidify_then_apply_gives_a_double_walled_cube,
     check_measuring_a_closed_cube_stores_its_millilitres,
     check_an_open_mesh_clears_the_stored_measurement,
     check_copying_a_value_finishes,
     check_export_stl_uses_the_fixed_settings,
+    # This opens a saved .blend, so it must stay last.
+    check_mixture_settings_survive_save_and_reload,
 )
 
 

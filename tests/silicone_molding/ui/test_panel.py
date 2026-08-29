@@ -7,10 +7,9 @@ The sidebar is one header-only parent panel with two collapsible children,
 ``Measurement`` above ``Processing`` (FR-3, FR-4). What a background run can
 state about that structure is the class-level declaration: who the parent
 is, in which order the children are drawn, and that neither child hides or
-collapses itself. The contents of ``draw`` -- the two branches of the result
-row and the fact that it measures nothing (FR-25, FR-48) -- cannot be
-reached without a window, and are covered by the review checklist (§10.4)
-and the manual checks AC-71 -- AC-74.
+collapses itself. The contents of ``draw`` cannot be reached without a
+window, so the volume result and mixture-table layout remain part of the
+manual Blender check.
 
 That registration actually accepts this parent/child arrangement (FR-8) is
 asserted in ``tests/silicone_molding/test_register.py``.
@@ -21,7 +20,9 @@ import pytest
 from silicone_molding.ui import (
     SILMOLD_PT_main,
     SILMOLD_PT_measurement,
+    SILMOLD_PT_mixture_calculator,
     SILMOLD_PT_processing,
+    SILMOLD_UL_mixture_parts,
 )
 
 
@@ -61,6 +62,16 @@ class TestTheSubPanelsAreOpenAndAlwaysVisible:
         assert not hasattr(SILMOLD_PT_processing, "poll")
 
 
+class TestMixtureCalculatorPopover:
+    def test_the_calculator_is_a_wide_view3d_popover(self) -> None:
+        assert SILMOLD_PT_mixture_calculator.bl_space_type == "VIEW_3D"
+        assert SILMOLD_PT_mixture_calculator.bl_region_type == "HEADER"
+        assert SILMOLD_PT_mixture_calculator.bl_ui_units_x >= 40
+
+    def test_the_mixture_rows_use_a_native_ui_list(self) -> None:
+        assert SILMOLD_UL_mixture_parts.bl_idname == "SILMOLD_UL_mixture_parts"
+
+
 @pytest.mark.api_contract
 class TestPublicSurface:
     """Contract pins, not behaviour tests.
@@ -83,3 +94,8 @@ class TestPublicSurface:
     def test_the_processing_panel_keeps_its_idname(self) -> None:
         # AC-61
         assert SILMOLD_PT_processing.bl_idname == "SILMOLD_PT_processing"
+
+    def test_the_calculator_popover_keeps_its_idname(self) -> None:
+        assert (
+            SILMOLD_PT_mixture_calculator.bl_idname == "SILMOLD_PT_mixture_calculator"
+        )

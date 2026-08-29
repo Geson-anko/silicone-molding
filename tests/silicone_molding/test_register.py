@@ -43,6 +43,18 @@ class TestRegistration:
         operators = dir(bpy.ops.silicone_molding)
         assert "export_stl" in operators
 
+    def test_the_mixture_table_operators_become_callable(
+        self, registered: None
+    ) -> None:
+        operators = dir(bpy.ops.silicone_molding)
+        for name in (
+            "add_mixture_part",
+            "remove_mixture_parts",
+            "move_mixture_parts",
+            "select_mixture_part",
+        ):
+            assert name in operators
+
     def test_the_sidebar_registers_as_a_parent_with_two_sub_panels(
         self, registered: None
     ) -> None:
@@ -54,7 +66,9 @@ class TestRegistration:
         types = dir(bpy.types)
         assert "SILMOLD_PT_main" in types
         assert "SILMOLD_PT_measurement" in types
+        assert "SILMOLD_PT_mixture_calculator" in types
         assert "SILMOLD_PT_processing" in types
+        assert "SILMOLD_UL_mixture_parts" in types
 
 
 class TestSolidifySettings:
@@ -99,3 +113,60 @@ class TestMeasurementSettings:
         # reasoning as the millimetre thickness above.
         properties = bpy.context.scene.silicone_molding.bl_rna.properties
         assert properties["volume_ml"].unit == "NONE"
+
+
+class TestMixtureSettings:
+    @pytest.mark.api_contract
+    def test_scene_settings_carry_the_mixture_properties(
+        self, registered: None
+    ) -> None:
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        for name in (
+            "mixture_use_shared_density",
+            "mixture_density_a_g_per_ml",
+            "mixture_density_b_g_per_ml",
+            "mixture_ratio_a",
+            "mixture_ratio_b",
+            "mixture_parts",
+            "mixture_selection_anchor",
+            "mixture_active_index",
+        ):
+            assert name in properties
+
+    @pytest.mark.api_contract
+    def test_mixture_rows_carry_the_saved_input_properties(
+        self, registered: None
+    ) -> None:
+        settings = bpy.context.scene.silicone_molding
+        settings.mixture_parts.clear()
+        part = settings.mixture_parts.add()
+
+        properties = part.bl_rna.properties
+        for name in ("enabled", "selected", "part_name", "volume_ml"):
+            assert name in properties
+
+        settings.mixture_parts.clear()
+
+    def test_mixture_settings_have_the_documented_defaults(
+        self, registered: None
+    ) -> None:
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert properties["mixture_use_shared_density"].default is True
+        assert properties["mixture_density_a_g_per_ml"].default == pytest.approx(1.1)
+        assert properties["mixture_density_b_g_per_ml"].default == pytest.approx(1.1)
+        assert properties["mixture_ratio_a"].default == pytest.approx(1.0)
+        assert properties["mixture_ratio_b"].default == pytest.approx(1.0)
+
+    def test_density_and_ratio_are_clamped_to_positive_values(
+        self, registered: None
+    ) -> None:
+        settings = bpy.context.scene.silicone_molding
+        settings.mixture_density_a_g_per_ml = 0.0
+        settings.mixture_density_b_g_per_ml = 0.0
+        settings.mixture_ratio_a = 0.0
+        settings.mixture_ratio_b = 0.0
+
+        assert settings.mixture_density_a_g_per_ml > 0.0
+        assert settings.mixture_density_b_g_per_ml > 0.0
+        assert settings.mixture_ratio_a > 0.0
+        assert settings.mixture_ratio_b > 0.0
