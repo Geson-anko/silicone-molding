@@ -1,5 +1,8 @@
 """Scene-level settings shared by the add-on's operators and panels."""
 
+from collections.abc import Sequence
+from typing import Protocol, cast
+
 import bpy
 from bpy.props import (
     BoolProperty,
@@ -13,6 +16,20 @@ from ..core import MIN_THICKNESS_MM
 
 _MIN_DENSITY_G_PER_ML = 0.001
 _MIN_MIXTURE_RATIO = 0.001
+
+
+class _SelectableMixturePart(Protocol):
+    """Typed view used by the active-row update callback."""
+
+    selected: bool
+
+
+class _MixtureSelectionState(Protocol):
+    """Typed view of dynamic RNA fields unavailable to static analysis."""
+
+    mixture_active_index: int
+    mixture_selection_anchor: int
+    mixture_parts: Sequence[_SelectableMixturePart]
 
 
 class SiliconeMoldingMixturePart(bpy.types.PropertyGroup):
@@ -46,6 +63,16 @@ class SiliconeMoldingMixturePart(bpy.types.PropertyGroup):
 
 class SiliconeMoldingProperties(bpy.types.PropertyGroup):
     """Settings stored on the scene as ``Scene.silicone_molding``."""
+
+    def _select_active_mixture_part(self, _context: bpy.types.Context) -> None:
+        """Mirror native UI-list activation into the saved row selection."""
+        state = cast(_MixtureSelectionState, self)
+        index = state.mixture_active_index
+        if not 0 <= index < len(state.mixture_parts):
+            return
+        for part_index, part in enumerate(state.mixture_parts):
+            part.selected = part_index == index
+        state.mixture_selection_anchor = index
 
     # Deliberately no ``unit="LENGTH"``: a length unit makes Blender display
     # and accept the value in the scene's ``unit_settings.length_unit``, which
@@ -134,4 +161,12 @@ class SiliconeMoldingProperties(bpy.types.PropertyGroup):
         default=-1,
         min=-1,
         options={"HIDDEN", "SKIP_SAVE"},
+    )
+
+    mixture_active_index: IntProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Active Mixture Part",
+        default=-1,
+        min=-1,
+        options={"HIDDEN", "SKIP_SAVE"},
+        update=_select_active_mixture_part,
     )

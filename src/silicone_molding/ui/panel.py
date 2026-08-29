@@ -1,7 +1,7 @@
 """Sidebar panels for the add-on."""
 
 from collections.abc import Iterable
-from typing import Final, Protocol, override
+from typing import Final, Protocol, cast, override
 
 import bpy
 
@@ -13,7 +13,6 @@ from ..operators import (
     SILMOLD_OT_export_stl,
     SILMOLD_OT_measure_volume,
     SILMOLD_OT_move_mixture_parts,
-    SILMOLD_OT_open_mixture_calculator,
     SILMOLD_OT_remove_mixture_parts,
     SILMOLD_OT_select_mixture_part,
     SILMOLD_OT_solidify,
@@ -46,10 +45,11 @@ class _MixtureSettings(Protocol):
     mixture_ratio_a: float
     mixture_ratio_b: float
     mixture_parts: Iterable[_MixturePartValues]
+    mixture_active_index: int
 
 
 def _mixture_table_row(layout: bpy.types.UILayout) -> bpy.types.UILayout:
-    """Return one evenly aligned row for the wide calculator dialog."""
+    """Return one evenly aligned row for the wide calculator popover."""
     return layout.grid_flow(
         row_major=True,
         columns=9,
@@ -78,7 +78,7 @@ def _mixture_breakdown(props: _MixtureSettings, volume_ml: float) -> MixtureBrea
 def _draw_mixture_header(layout: bpy.types.UILayout) -> None:
     """Draw headings for the editable and calculated table columns."""
     grid = _mixture_table_row(layout)
-    grid.label(text="")
+    grid.label(text="#")
     grid.label(text="Enabled")
     grid.label(text="Name")
     grid.label(text="Vol")
@@ -104,13 +104,12 @@ def _draw_mixture_part(
     part: _MixturePartValues,
     index: int,
 ) -> None:
-    """Draw one part across the full width of the calculator dialog."""
+    """Draw one part across the full width of the calculator popover."""
     row = _mixture_table_row(layout)
     select = row.operator(
         SILMOLD_OT_select_mixture_part.bl_idname,
-        text="",
-        icon="CHECKBOX_HLT" if part.selected else "CHECKBOX_DEHLT",
-        emboss=False,
+        text=str(index + 1),
+        depress=part.selected,
     )
     select.index = index
     row.prop(part, "enabled", text="")
@@ -185,11 +184,19 @@ def draw_mixture_calculator(
     ratio.prop(props, "mixture_ratio_b", text="Ratio B")
 
     guidance = layout.row(align=True)
-    guidance.label(text="Select rows with Click / Ctrl / Shift")
+    guidance.label(text="Select row numbers with Click / Ctrl / Shift")
     guidance.label(text="Volumes: mL / Weights: g")
     _draw_mixture_header(layout)
-    for index, part in enumerate(props.mixture_parts):
-        _draw_mixture_part(layout, props, part, index)
+    layout.template_list(
+        SILMOLD_UL_mixture_parts.bl_idname,
+        "",
+        props,
+        "mixture_parts",
+        props,
+        "mixture_active_index",
+        rows=6,
+        maxrows=10,
+    )
 
     any_selected = any(part.selected for part in props.mixture_parts)
     controls = layout.row(align=True)
@@ -223,6 +230,33 @@ def draw_mixture_calculator(
     _draw_mixture_summary(layout, props, "Total", total_volume)
 
 
+class SILMOLD_UL_mixture_parts(bpy.types.UIList):
+    """Editable mixture rows with Blender's native active-row highlight."""
+
+    bl_idname = "SILMOLD_UL_mixture_parts"
+
+    @override
+    def draw_item(
+        self,
+        context: bpy.types.Context,
+        layout: bpy.types.UILayout,
+        data: object | None,
+        item: object | None,
+        icon: int | None,
+        active_data: object,
+        active_property: str | None,
+        index: int | None,
+        flt_flag: int | None,
+    ) -> None:
+        """Draw one editable table row inside the native UI list."""
+        del context, data, icon, active_property, flt_flag
+        if item is None or index is None:
+            return
+        props = cast(_MixtureSettings, active_data)
+        part = cast(_MixturePartValues, item)
+        _draw_mixture_part(layout, props, part, index)
+
+
 class SILMOLD_PT_main(bpy.types.Panel):
     """Entry point for the add-on in the 3D View sidebar."""
 
@@ -240,6 +274,22 @@ class SILMOLD_PT_main(bpy.types.Panel):
         The method stays because Blender refuses to register a panel
         without a ``draw``.
         """
+
+
+class SILMOLD_PT_mixture_calculator(bpy.types.Panel):
+    """Wide calculator opened as a popover beside the sidebar."""
+
+    bl_label = "Mixture Calculator"
+    bl_idname = "SILMOLD_PT_mixture_calculator"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "HEADER"
+    bl_ui_units_x = 48
+
+    @override
+    def draw(self, context: bpy.types.Context) -> None:
+        layout = self.layout
+        assert layout is not None
+        draw_mixture_calculator(layout, context.scene.silicone_molding)
 
 
 class SILMOLD_PT_measurement(bpy.types.Panel):
@@ -280,9 +330,11 @@ class SILMOLD_PT_measurement(bpy.types.Panel):
             copy.value = text
 
         layout.separator()
-        layout.operator(
-            SILMOLD_OT_open_mixture_calculator.bl_idname,
+        layout.popover(
+            panel=SILMOLD_PT_mixture_calculator.bl_idname,
+            text="Mixture Calculator",
             icon="SPREADSHEET",
+            direction="HORIZONTAL",
         )
 
 
