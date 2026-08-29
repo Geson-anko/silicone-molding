@@ -31,6 +31,20 @@ _VOLUME_LABEL: Final = "Volume (mL)"
 #: characters keeps the row's shape identical before and after measuring.
 _NOT_MEASURED: Final = "--"
 
+# Relative widths keep the whole table responsive while reserving most of the
+# flexible space for the editable part name. Selection and Enabled stay compact.
+_MIXTURE_COLUMN_WEIGHTS: Final = (
+    0.65,
+    1.2,
+    4.4,
+    1.55,
+    1.55,
+    1.55,
+    1.55,
+    1.55,
+    1.55,
+)
+
 
 class _MixturePartValues(Protocol):
     """Typed view of the RNA fields read by the panel."""
@@ -53,15 +67,22 @@ class _MixtureSettings(Protocol):
     mixture_active_index: int
 
 
-def _mixture_table_row(layout: bpy.types.UILayout) -> bpy.types.UILayout:
-    """Return one evenly aligned row for the wide calculator popover."""
-    return layout.grid_flow(
-        row_major=True,
-        columns=9,
-        even_columns=True,
-        even_rows=True,
-        align=True,
-    )
+def _mixture_table_cells(
+    layout: bpy.types.UILayout,
+) -> tuple[bpy.types.UILayout, ...]:
+    """Return responsive table cells using the shared column proportions."""
+    remaining = layout.row(align=True)
+    remaining_weight = sum(_MIXTURE_COLUMN_WEIGHTS)
+    cells: list[bpy.types.UILayout] = []
+
+    for weight in _MIXTURE_COLUMN_WEIGHTS[:-1]:
+        split = remaining.split(factor=weight / remaining_weight, align=True)
+        cells.append(split.column(align=True))
+        remaining = split.column(align=True)
+        remaining_weight -= weight
+
+    cells.append(remaining)
+    return tuple(cells)
 
 
 def _mixture_breakdown(props: _MixtureSettings, volume_ml: float) -> MixtureBreakdown:
@@ -82,16 +103,13 @@ def _mixture_breakdown(props: _MixtureSettings, volume_ml: float) -> MixtureBrea
 
 def _draw_mixture_header(layout: bpy.types.UILayout) -> None:
     """Draw headings for the editable and calculated table columns."""
-    grid = _mixture_table_row(layout)
-    grid.label(text="#")
-    grid.label(text="Enabled")
-    grid.label(text="Name")
-    grid.label(text="Vol")
-    grid.label(text="W (g)")
-    grid.label(text="A Vol")
-    grid.label(text="B Vol")
-    grid.label(text="A W")
-    grid.label(text="B W")
+    cells = _mixture_table_cells(layout)
+    for cell, label in zip(
+        cells,
+        ("#", "Enabled", "Name", "Vol", "W (g)", "A Vol", "B Vol", "A W", "B W"),
+        strict=True,
+    ):
+        cell.label(text=label)
 
 
 def _draw_mixture_output_cell(
@@ -110,26 +128,30 @@ def _draw_mixture_part(
     index: int,
 ) -> None:
     """Draw one part across the full width of the calculator popover."""
-    row = _mixture_table_row(layout)
-    select = row.operator(
+    cells = _mixture_table_cells(layout)
+    select = cells[0].operator(
         SILMOLD_OT_select_mixture_part.bl_idname,
         text=str(index + 1),
         depress=part.selected,
     )
     select.index = index
-    row.prop(part, "enabled", text="")
-    row.prop(part, "part_name", text="")
-    row.prop(part, "volume_ml", text="")
+    cells[1].prop(part, "enabled", text="")
+    cells[2].prop(part, "part_name", text="")
+    cells[3].prop(part, "volume_ml", text="")
 
     breakdown = _mixture_breakdown(props, part.volume_ml)
-    for text in (
-        format_grams(breakdown.weight_g),
-        format_ml(breakdown.a_volume_ml),
-        format_ml(breakdown.b_volume_ml),
-        format_grams(breakdown.a_weight_g),
-        format_grams(breakdown.b_weight_g),
+    for cell, text in zip(
+        cells[4:],
+        (
+            format_grams(breakdown.weight_g),
+            format_ml(breakdown.a_volume_ml),
+            format_ml(breakdown.b_volume_ml),
+            format_grams(breakdown.a_weight_g),
+            format_grams(breakdown.b_weight_g),
+        ),
+        strict=True,
     ):
-        _draw_mixture_output_cell(row, text, enabled=part.enabled)
+        _draw_mixture_output_cell(cell, text, enabled=part.enabled)
 
 
 def _draw_mixture_summary(
@@ -139,21 +161,25 @@ def _draw_mixture_summary(
     volume_ml: float,
 ) -> None:
     """Draw one subtotal using the same columns as a part row."""
-    row = _mixture_table_row(layout)
-    row.label(text="")
-    row.label(text="")
-    row.label(text=label)
-    row.label(text=format_ml(volume_ml))
+    cells = _mixture_table_cells(layout)
+    cells[0].label(text="")
+    cells[1].label(text="")
+    cells[2].label(text=label)
+    cells[3].label(text=format_ml(volume_ml))
 
     breakdown = _mixture_breakdown(props, volume_ml)
-    for text in (
-        format_grams(breakdown.weight_g),
-        format_ml(breakdown.a_volume_ml),
-        format_ml(breakdown.b_volume_ml),
-        format_grams(breakdown.a_weight_g),
-        format_grams(breakdown.b_weight_g),
+    for cell, text in zip(
+        cells[4:],
+        (
+            format_grams(breakdown.weight_g),
+            format_ml(breakdown.a_volume_ml),
+            format_ml(breakdown.b_volume_ml),
+            format_grams(breakdown.a_weight_g),
+            format_grams(breakdown.b_weight_g),
+        ),
+        strict=True,
     ):
-        row.label(text=text)
+        cell.label(text=text)
 
 
 def _included_mixture_volume(
