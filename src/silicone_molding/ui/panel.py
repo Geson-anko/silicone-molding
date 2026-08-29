@@ -432,7 +432,9 @@ class SILMOLD_PT_processing(bpy.types.Panel):
         assert layout is not None
         props = context.scene.silicone_molding
         layout.prop(props, "solidify_thickness_mm")
-        layout.prop(props, "solidify_flip")
+        row = layout.row()
+        row.prop(props, "solidify_flip")
+        row.prop(props, "solidify_even_thickness")
         layout.operator(SILMOLD_OT_solidify.bl_idname, icon="MOD_SOLIDIFY")
         layout.operator(SILMOLD_OT_apply_solidify.bl_idname)
         layout.separator()

@@ -114,16 +114,21 @@ class TestEnsureSolidify:
 
         assert modifier.offset == -1.0
 
-    def test_even_thickness_is_on_whichever_way_the_wall_faces(
+    def test_even_thickness_is_on_by_default(
         self, cube_object: bpy.types.Object
     ) -> None:
-        # FR-9: without it a corner only travels `thickness` along its
-        # averaged normal and the wall measures less than the requested mm.
-        outward = ensure_solidify(cube_object, THICKNESS, flip=False)
-        assert outward.use_even_offset
+        modifier = ensure_solidify(cube_object, THICKNESS)
 
-        inward = ensure_solidify(cube_object, THICKNESS, flip=True)
-        assert inward.use_even_offset
+        assert modifier.use_even_offset
+
+    def test_even_thickness_can_be_turned_off_on_an_existing_modifier(
+        self, cube_object: bpy.types.Object
+    ) -> None:
+        ensure_solidify(cube_object, THICKNESS, even_thickness=True)
+
+        modifier = ensure_solidify(cube_object, THICKNESS, even_thickness=False)
+
+        assert not modifier.use_even_offset
 
     def test_the_remaining_solidify_settings_are_left_at_blender_defaults(
         self, cube_object: bpy.types.Object

@@ -22,7 +22,7 @@ ______________________________________________________________________
 - G-2. 肉厚を **mm で入力** でき、シーンの単位スケール設定に関わらず実寸として正しく反映される
 - G-3. 肉厚を付ける向き（外側 / 内側）を切り替えられる
 - G-4. アドオンが付けたモディファイアだけを、`bpy.ops` を経由せずにメッシュへ焼き込める（適用）
-- G-5. 角部でも指定した mm が実寸として出る（Even Thickness）
+- G-5. 角部でも指定した mm が実寸として出る Even Thickness を切り替えられる
 
 ### 1.4 非ゴール (out of scope)
 
@@ -66,6 +66,7 @@ ______________________________________________________________________
 - FR-1. `Scene.silicone_molding` に肉厚を mm で保持するプロパティ `solidify_thickness_mm` を持たせる (MUST)。既定値 3.0、最小値 `MIN_THICKNESS_MM` (= 1e-3)、ソフト上限 50.0、表示精度は小数 2 桁
 - FR-2. `solidify_thickness_mm` に `unit="LENGTH"` を設定してはならない (MUST NOT)。設定するとシーンの `unit_settings.length_unit` に従って表示単位が変わり、「常に mm で入力する」という FR-1 の要件と衝突する
 - FR-3. `Scene.silicone_molding` に方向反転フラグ `solidify_flip` を持たせる (MUST)。既定値は `False`（＝外側）
+- FR-3a. `Scene.silicone_molding` に均一化フラグ `solidify_even_thickness` を持たせる (MUST)。既存の挙動を維持するため既定値は `True`
 
 **単位換算**
 
@@ -77,7 +78,7 @@ ______________________________________________________________________
 - FR-6. 選択中の **全メッシュオブジェクト** に対して処理する (MUST)。アクティブオブジェクトのみを対象にしてはならない
 - FR-7. 対象オブジェクトに固定名 `"Silicone Molding Solidify"` の Solidify モディファイアが無ければ新規追加し、あれば設定を上書きする (MUST)。同一オブジェクトに 2 つ以上作ってはならない
 - FR-8. 設定するプロパティは `thickness` / `offset` / `use_even_offset` の 3 つのみとする (MUST)。それ以外は Blender の既定値のまま（`solidify_mode = "EXTRUDE"`、`use_rim = True` 等）に委ねる
-- FR-9. `use_even_offset` は常に `True` とする (MUST)。角部でも指定 mm が実寸として出るようにするため
+- FR-9. `use_even_offset` は `solidify_even_thickness` と同じ値にする (MUST)。真なら角部でも指定 mm が実寸として出る
 - FR-10. `offset` は `solidify_flip` が偽なら `+1.0`（外側）、真なら `-1.0`（内側）とする (MUST)
 - FR-11. 同じ操作を繰り返した場合、モディファイアの個数と設定値は 1 回目と同一でなければならない (MUST、冪等性)
 
@@ -92,7 +93,7 @@ ______________________________________________________________________
 
 **UI とオペレータ**
 
-- FR-18. サイドバーの既存パネル `SILMOLD_PT_main` に、2 プロパティと 2 ボタン（Solidify / Apply）を配置する (MUST)。サブパネルは作らない (MUST NOT)
+- FR-18. サイドバーの Processing パネルに、3 プロパティと 2 ボタン（Solidify / Apply）を配置する (MUST)。`solidify_flip` と `solidify_even_thickness` は同じ行に配置する
 - FR-19. オペレータは自前の `bpy.props` を持たず、設定は `context.scene.silicone_molding` から読む (MUST)
 - FR-20. 適用オペレータは、対象となるモディファイアを持つオブジェクトが選択に 1 つも無いとき `poll` が偽を返し、ボタンがグレーアウトする (MUST)
 - FR-21. 両オペレータの `bl_options` は `{"REGISTER", "UNDO"}` とする (MUST)
@@ -119,13 +120,13 @@ ______________________________________________________________________
 | `core/` | `__init__.py`（変更） | `__all__` に公開面を集約 |
 | `operators/` | `solidify.py`（新規） | 2 つのオペレータ。選択の走査、単位換算、エラーの `self.report` への変換 |
 | `operators/` | `__init__.py`（変更） | オペレータクラスの再エクスポート |
-| `ui/` | `properties.py`（変更） | `solidify_thickness_mm` / `solidify_flip` |
+| `ui/` | `properties.py`（変更） | `solidify_thickness_mm` / `solidify_flip` / `solidify_even_thickness` |
 | `ui/` | `panel.py`（変更） | プロパティとボタンの描画 |
 | ルート | `__init__.py`（変更） | `_CLASSES` へのオペレータ登録 |
 
 ### 4.2 データフロー
 
-1. ユーザーがサイドバーで mm 値と向きを入力 → `Scene.silicone_molding` に保存される
+1. ユーザーがサイドバーで mm 値、向き、均一化の有無を入力 → `Scene.silicone_molding` に保存される
 2. ユーザーが **Solidify** ボタンを押す → オペレータが `context.scene.unit_settings.scale_length` を読み、`mm_to_units` で BU に換算
 3. オペレータが `context.selected_objects` のうち `type == "MESH"` のものを順に走査し、各オブジェクトに `ensure_solidify` を呼ぶ
 4. ユーザーが **Apply** ボタンを押す → オペレータが `context.evaluated_depsgraph_get()` を取得し、各オブジェクトに `apply_solidify` を呼ぶ
@@ -188,19 +189,20 @@ ______________________________________________________________________
 - 例外: 送出しない
 - 実装上の注記: 型の判定には `isinstance(mod, bpy.types.SolidifyModifier)` を用いると、実行時の検証と pyright の型絞り込みを同時に満たせる
 
-**`ensure_solidify(obj: bpy.types.Object, thickness: float, *, flip: bool = False) -> bpy.types.SolidifyModifier`**
+**`ensure_solidify(obj: bpy.types.Object, thickness: float, *, flip: bool = False, even_thickness: bool = True) -> bpy.types.SolidifyModifier`**
 
 - 目的: `obj` にアドオン管理下の Solidify モディファイアが存在することを保証し、設定を反映する
 - 引数
   - `obj`: 対象オブジェクト。メッシュオブジェクトであること
   - `thickness`: 肉厚（**Blender units**）。mm からの換算は呼び出し側の責務
   - `flip`: 真なら内側、偽なら外側に肉厚を付ける
+  - `even_thickness`: 真なら角部を補正して均一な厚みにする
 - 戻り値: 追加または更新されたモディファイア
 - 振る舞い
   1. `find_solidify(obj)` が `None` なら `obj.modifiers.new(MODIFIER_NAME, "SOLIDIFY")` で新規作成する。`None` でなければそれを再利用する
   2. `thickness` を `thickness` 引数の値に設定する
   3. `offset` を `-1.0`（`flip` が真）または `+1.0`（偽）に設定する
-  4. `use_even_offset` を `True` に設定する
+  4. `use_even_offset` を `even_thickness` に設定する
 - 事前条件: `obj.data` がメッシュであること。呼び出し側（オペレータ層）が保証する
 - 事後条件
   - `find_solidify(obj)` は戻り値と同一のモディファイアを返す
@@ -267,7 +269,7 @@ ______________________________________________________________________
 - `execute`
   1. `props = context.scene.silicone_molding`
   2. `thickness = mm_to_units(props.solidify_thickness_mm, context.scene.unit_settings.scale_length)`
-  3. `context.selected_objects` のうち `type == "MESH"` のものを順に走査し、各オブジェクトに `ensure_solidify(obj, thickness, flip=props.solidify_flip)` を呼ぶ
+  3. `context.selected_objects` のうち `type == "MESH"` のものを順に走査し、各オブジェクトに `ensure_solidify(obj, thickness, flip=props.solidify_flip, even_thickness=props.solidify_even_thickness)` を呼ぶ
   4. 処理件数を `self.report({"INFO"}, ...)` で報告し `{"FINISHED"}` を返す
 - 例外処理: `ensure_solidify` は例外を送出しないため、`try` / `except` を書いてはならない (MUST NOT)。`poll` が 1 件以上のメッシュを保証するので `{"CANCELLED"}` の分岐も持たない（§11 OQ-2 を参照）
 
@@ -289,12 +291,13 @@ ______________________________________________________________________
 
 ### 5.5 `ui/properties.py`
 
-`SiliconeMoldingProperties` に 2 つのプロパティを追加する。
+`SiliconeMoldingProperties` に 3 つのプロパティを追加する。
 
 | プロパティ名 | 型 | 引数 |
 | --- | --- | --- |
 | `solidify_thickness_mm` | `FloatProperty` | `name="Thickness (mm)"`, `default=3.0`, `min=MIN_THICKNESS_MM`, `soft_max=50.0`, `precision=2` |
 | `solidify_flip` | `BoolProperty` | `name="Flip Direction"`, `default=False` |
+| `solidify_even_thickness` | `BoolProperty` | `name="Even Thickness"`, `default=True` |
 
 - `unit="LENGTH"` を付けてはならない (MUST NOT、FR-2)
 - `description` は付けてよい (MAY)。文言は公開 API ではない
@@ -302,10 +305,10 @@ ______________________________________________________________________
 
 ### 5.6 `ui/panel.py`
 
-`SILMOLD_PT_main.draw` に以下を追記する。サブパネルは作らない (MUST NOT)。
+`SILMOLD_PT_processing.draw` に以下を配置する。
 
 1. `solidify_thickness_mm` のプロパティ行
-2. `solidify_flip` のプロパティ行
+2. `solidify_flip` と `solidify_even_thickness` を同じプロパティ行
 3. `SILMOLD_OT_solidify` のボタン（アイコン `MOD_SOLIDIFY`）
 4. `SILMOLD_OT_apply_solidify` のボタン
 
@@ -325,6 +328,7 @@ ______________________________________________________________________
 | --- | --- | --- | --- | --- | --- |
 | `solidify_thickness_mm` | `Scene.silicone_molding` | mm | 3.0 | `[1e-3, ∞)`、ソフト上限 50.0 | `FloatProperty` の `min`（RNA がクランプ） |
 | `solidify_flip` | `Scene.silicone_molding` | — | `False` | `{False, True}` | 型により自明 |
+| `solidify_even_thickness` | `Scene.silicone_molding` | — | `True` | `{False, True}` | 型により自明 |
 | `thickness`（`ensure_solidify` 引数） | 引数 | BU | — | 制約なし | 検証しない（§5.2） |
 | `scale_length` | `Scene.unit_settings` | m / BU | 1.0 | 正の実数 | Blender 本体 |
 
@@ -349,7 +353,7 @@ ______________________________________________________________________
 ### S-1: 閉じたメッシュに外側の肉厚を付ける（基本シナリオ）
 
 - **Given** 原点に 2×2×2 の立方体オブジェクトが 1 つあり、それだけが選択されている
-- **And** `scale_length` が 1.0、`solidify_thickness_mm` が 3.0、`solidify_flip` が偽である
+- **And** `scale_length` が 1.0、`solidify_thickness_mm` が 3.0、`solidify_flip` が偽、`solidify_even_thickness` が真である
 - **When** ユーザーが **Solidify** ボタンを押す
 - **Then** 立方体に `"Silicone Molding Solidify"` という名前の Solidify モディファイアが 1 つ追加される
 - **And** その `thickness` は 0.003、`offset` は `+1.0`、`use_even_offset` は `True` である
@@ -359,8 +363,8 @@ ______________________________________________________________________
 ### S-2: 設定を変えて再実行する
 
 - **Given** S-1 の終了状態
-- **When** ユーザーが `solidify_thickness_mm` を 5.0 に変えて再び **Solidify** を押す
-- **Then** モディファイアは新規追加されず、既存のものの `thickness` が 0.005 に更新される
+- **When** ユーザーが `solidify_thickness_mm` を 5.0、`solidify_even_thickness` を偽に変えて再び **Solidify** を押す
+- **Then** モディファイアは新規追加されず、既存のものの `thickness` が 0.005、`use_even_offset` が `False` に更新される
 - **And** モディファイアの総数は 1 のまま、スタック内の位置も変わらない
 
 ### S-3: 内側に肉厚を付ける
@@ -482,7 +486,7 @@ ______________________________________________________________________
 - [ ] AC-5. モディファイアを持たないメッシュオブジェクトに `ensure_solidify(obj, 0.003)` を呼ぶと、`obj.modifiers` の長さが 1 になり、その名前が `MODIFIER_NAME`、型が `"SOLIDIFY"` である
 - [ ] AC-6. 同オブジェクトに対して `thickness` を変えて 2 回目を呼ぶと、`obj.modifiers` の長さは 1 のままで、`thickness` が新しい値に更新されている
 - [ ] AC-7. `flip=False` のとき `offset == 1.0`、`flip=True` のとき `offset == -1.0`
-- [ ] AC-8. いずれの場合も `use_even_offset` が `True`
+- [ ] AC-8. `even_thickness=True` のとき `use_even_offset` が `True`、`even_thickness=False` のとき `False`
 - [ ] AC-9. `solidify_mode` が `"EXTRUDE"`、`use_rim` が `True`（Blender 既定を変更していないことの確認。既定値が変わった場合に気付くためのピン）
 - [ ] AC-10. `find_solidify` は、モディファイアが無いオブジェクトに対して `None` を返す
 - [ ] AC-11. `find_solidify` は、`ensure_solidify` 後のオブジェクトに対して同一のモディファイアを返す
@@ -521,6 +525,7 @@ ______________________________________________________________________
 - [ ] AC-33. メッシュ 2 つと非メッシュ 1 つを選択して solidify を実行すると、メッシュ 2 つだけにモディファイアが付く
 - [ ] AC-34. `scale_length = 0.001` のシーンで `solidify_thickness_mm = 3.0` のまま実行すると、モディファイアの `thickness` が 3.0 になる（`scale_length = 1.0` なら 0.003）
 - [ ] AC-35. `solidify_flip = True` で実行すると `offset == -1.0` になる
+- [ ] AC-35a. `solidify_even_thickness = False` で実行すると `use_even_offset` が `False` になる
 - [ ] AC-36. 適用オペレータをマルチユーザーメッシュのみの選択で実行すると `{"CANCELLED"}` を返す
 - [ ] AC-37. 適用オペレータをシングルユーザー 1 件・マルチユーザー 1 件の選択で実行すると `{"FINISHED"}` を返し、シングルユーザー側にだけ適用されている
 
@@ -530,7 +535,7 @@ ______________________________________________________________________
 
 - [ ] AC-38. `SILMOLD_OT_solidify.bl_idname == "silicone_molding.solidify"`
 - [ ] AC-39. `SILMOLD_OT_apply_solidify.bl_idname == "silicone_molding.apply_solidify"`
-- [ ] AC-40. 登録後、`Scene.silicone_molding` に `solidify_thickness_mm` と `solidify_flip` が存在する
+- [ ] AC-40. 登録後、`Scene.silicone_molding` に `solidify_thickness_mm`、`solidify_flip`、`solidify_even_thickness` が存在する。`solidify_even_thickness` の既定値は `True`
 - [ ] AC-41. `MODIFIER_NAME == "Silicone Molding Solidify"`（既存 `.blend` との結び付きを守るため）
 
 ### 9.7 実 Blender での統合（tier 2、モジュール B、`tests/blender/run.py` に追記）

@@ -62,6 +62,7 @@ def settings(registered: None) -> bpy.types.PropertyGroup:
     props = bpy.context.scene.silicone_molding
     props.solidify_thickness_mm = THICKNESS_MM
     props.solidify_flip = False
+    props.solidify_even_thickness = True
     return props
 
 
@@ -257,6 +258,18 @@ class TestSolidifyOperator:
         modifier = find_solidify(obj)
         assert modifier is not None
         assert modifier.offset == -1.0
+
+    def test_even_thickness_setting_reaches_the_modifier(
+        self, add_object: AddObject, settings: bpy.types.PropertyGroup
+    ) -> None:
+        settings.solidify_even_thickness = False
+        obj = add_object("Cube")
+
+        bpy.ops.silicone_molding.solidify()
+
+        modifier = find_solidify(obj)
+        assert modifier is not None
+        assert not modifier.use_even_offset
 
 
 class TestApplySolidifyOperator:

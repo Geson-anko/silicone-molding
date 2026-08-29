@@ -81,6 +81,11 @@ class TestSolidifySettings:
         properties = bpy.context.scene.silicone_molding.bl_rna.properties
         assert "solidify_thickness_mm" in properties
         assert "solidify_flip" in properties
+        assert "solidify_even_thickness" in properties
+
+    def test_even_thickness_is_enabled_by_default(self, registered: None) -> None:
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert properties["solidify_even_thickness"].default
 
     def test_thickness_is_not_declared_as_a_length_property(
         self, registered: None

@@ -45,7 +45,11 @@ def find_solidify(obj: bpy.types.Object) -> bpy.types.SolidifyModifier | None:
 
 
 def ensure_solidify(
-    obj: bpy.types.Object, thickness: float, *, flip: bool = False
+    obj: bpy.types.Object,
+    thickness: float,
+    *,
+    flip: bool = False,
+    even_thickness: bool = True,
 ) -> bpy.types.SolidifyModifier:
     """Make sure *obj* carries the addon's Solidify modifier and configure it.
 
@@ -62,6 +66,8 @@ def ensure_solidify(
             :func:`~silicone_molding.core.units.mm_to_units`). The value
             is not validated; the UI's property range is what bounds it.
         flip: Grow the wall inwards instead of outwards.
+        even_thickness: Compensate at corners to keep the requested wall
+            thickness.
 
     Returns:
         The modifier that was added or updated.
@@ -76,9 +82,7 @@ def ensure_solidify(
 
     modifier.thickness = thickness
     modifier.offset = -1.0 if flip else 1.0
-    # Even thickness keeps the wall at the requested distance at corners
-    # too, instead of shrinking it by the angle between the faces.
-    modifier.use_even_offset = True
+    modifier.use_even_offset = even_thickness
     return modifier
 
 
