@@ -5,8 +5,7 @@ scene's unit settings: wall thickness is authored in millimetres and
 volume is reported in millilitres, because those are the languages of 3D
 printing and of casting silicone. Blender stores
 both in its own unit system, so the conversions between the two live
-here, together with the single decimal format that defines what a volume
-looks like on screen and in the clipboard.
+here, together with the fixed-decimal formats used for volume and weight.
 
 Nothing in this module may import ``bpy``: the scene's unit scale is
 passed in as a plain number by the caller, which keeps every function
@@ -69,3 +68,15 @@ def format_ml(volume_ml: float) -> str:
         digits, without a unit suffix.
     """
     return f"{volume_ml:.2f}"
+
+
+def format_grams(weight_g: float) -> str:
+    """Format a weight in grams for the mixture table.
+
+    Args:
+        weight_g: Weight in grams.
+
+    Returns:
+        A fixed two-decimal number without a unit or thousands separator.
+    """
+    return f"{weight_g:.2f}"

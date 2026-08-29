@@ -9,6 +9,7 @@ extends = ":workspace"
 "~/.ssh" = "deny"
 
 [permissions.project-edit.filesystem.":workspace_roots"]
+".git" = "write"
 "**/*.env" = "deny"
 
 [permissions.project-edit.network]
