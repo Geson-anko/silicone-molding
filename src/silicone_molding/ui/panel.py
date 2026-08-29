@@ -1,9 +1,14 @@
 """Sidebar panels for the add-on."""
 
-from collections.abc import Iterable
-from typing import Final, Protocol, cast, override
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Final, Protocol, cast, override
 
 import bpy
+
+if TYPE_CHECKING:
+    from bpy.types import bpy_prop_array
 
 from ..core import MixtureBreakdown, calculate_mixture, format_grams, format_ml
 from ..operators import (
@@ -44,7 +49,7 @@ class _MixtureSettings(Protocol):
     mixture_density_b_g_per_ml: float
     mixture_ratio_a: float
     mixture_ratio_b: float
-    mixture_parts: Iterable[_MixturePartValues]
+    mixture_parts: Sequence[_MixturePartValues]
     mixture_active_index: int
 
 
@@ -162,6 +167,26 @@ def _included_mixture_volume(
     )
 
 
+def _filter_mixture_parts_by_name(
+    pattern: str,
+    bitflag: int,
+    parts: Sequence[_MixturePartValues],
+    *,
+    reverse: bool = False,
+) -> list[int]:
+    """Return Blender UI-list flags matching the saved part name."""
+    return cast(
+        list[int],
+        bpy.types.UI_UL_list.filter_items_by_name(  # pyright: ignore[reportUnknownMemberType]
+            pattern,
+            bitflag,
+            parts,
+            "part_name",
+            reverse=reverse,
+        ),
+    )
+
+
 def draw_mixture_calculator(
     layout: bpy.types.UILayout, props: _MixtureSettings
 ) -> None:
@@ -189,7 +214,7 @@ def draw_mixture_calculator(
     _draw_mixture_header(layout)
     layout.template_list(
         SILMOLD_UL_mixture_parts.bl_idname,
-        "",
+        "mixture_parts",
         props,
         "mixture_parts",
         props,
@@ -255,6 +280,31 @@ class SILMOLD_UL_mixture_parts(bpy.types.UIList):
         props = cast(_MixtureSettings, active_data)
         part = cast(_MixturePartValues, item)
         _draw_mixture_part(layout, props, part, index)
+
+    @override
+    def filter_items(
+        self,
+        context: bpy.types.Context,
+        data: object | None,
+        property: str,
+    ) -> tuple[bpy_prop_array, bpy_prop_array]:
+        """Filter displayed rows by their editable Name value."""
+        del context
+        if data is None:
+            return cast("bpy_prop_array", []), cast("bpy_prop_array", [])
+        parts = cast(Sequence[_MixturePartValues], getattr(data, property))
+        flags = _filter_mixture_parts_by_name(
+            self.filter_name,
+            self.bitflag_filter_item,
+            parts,
+            reverse=self.use_filter_invert,
+        )
+        # Blender consumes ordinary Python lists here, while the 5.1 stub
+        # declares the callback result as bpy_prop_array.
+        return (
+            cast("bpy_prop_array", flags),
+            cast("bpy_prop_array", []),
+        )
 
 
 class SILMOLD_PT_main(bpy.types.Panel):
