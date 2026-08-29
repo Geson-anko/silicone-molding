@@ -1,6 +1,6 @@
-"""Operators that edit and select rows in the silicone mixture table."""
+"""Operators that open, edit, and select the silicone mixture table."""
 
-from typing import cast, override
+from typing import Final, cast, override
 
 import bpy
 from bpy.props import EnumProperty, IntProperty
@@ -13,6 +13,77 @@ _SELECTION_MODES = (
     ("RANGE", "Range", "Select a continuous range from the anchor"),
     ("ADD_RANGE", "Add Range", "Add a continuous range from the anchor"),
 )
+
+_MIXTURE_DIALOG_WIDTH: Final = 900
+
+
+class SILMOLD_OT_open_mixture_calculator(bpy.types.Operator):
+    """Open the mixture calculator in a dedicated Blender window."""
+
+    bl_idname = "silicone_molding.open_mixture_calculator"
+    bl_label = "Open Mixture Calculator"
+    _window_pointer = 0
+
+    @override
+    def invoke(
+        self, context: bpy.types.Context, event: bpy.types.Event
+    ) -> OperatorReturn:
+        del event
+        window_manager = context.window_manager
+        existing_windows = {window.as_pointer() for window in window_manager.windows}
+        result = bpy.ops.wm.window_new()
+        if result != {"FINISHED"}:
+            return result
+
+        calculator_window = next(
+            window
+            for window in window_manager.windows
+            if window.as_pointer() not in existing_windows
+        )
+        self._window_pointer = calculator_window.as_pointer()
+        area = calculator_window.screen.areas[0]
+        region = next(region for region in area.regions if region.type == "WINDOW")
+        with context.temp_override(  # pyright: ignore[reportUnknownMemberType]
+            window=calculator_window,
+            area=area,
+            region=region,
+        ):
+            return window_manager.invoke_props_dialog(
+                self,
+                width=_MIXTURE_DIALOG_WIDTH,
+                title="Mixture Calculator",
+                confirm_text="Close",
+                translate=False,
+            )
+
+    @override
+    def draw(self, context: bpy.types.Context) -> None:
+        # Imported lazily to keep the operator and panel modules from importing
+        # each other while Blender registers the extension.
+        from ..ui.panel import draw_mixture_calculator
+
+        layout = self.layout
+        assert layout is not None
+        draw_mixture_calculator(layout, context.scene.silicone_molding)
+
+    @override
+    def execute(self, context: bpy.types.Context) -> OperatorReturn:
+        self._close_window(context)
+        return {"FINISHED"}
+
+    @override
+    def cancel(self, context: bpy.types.Context) -> None:
+        self._close_window(context)
+
+    def _close_window(self, context: bpy.types.Context) -> None:
+        window = context.window
+        if (
+            window is not None
+            and window.as_pointer() == self._window_pointer
+            and len(context.window_manager.windows) > 1
+        ):
+            self._window_pointer = 0
+            bpy.ops.wm.window_close()
 
 
 class SILMOLD_OT_add_mixture_part(bpy.types.Operator):
