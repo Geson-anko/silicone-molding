@@ -7,8 +7,10 @@ import bpy
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
+    EnumProperty,
     FloatProperty,
     IntProperty,
+    PointerProperty,
     StringProperty,
 )
 
@@ -16,6 +18,31 @@ from ..core import MIN_THICKNESS_MM
 
 _MIN_DENSITY_G_PER_ML = 0.001
 _MIN_MIXTURE_RATIO = 0.001
+
+_BOOLEAN_SOLVERS = (
+    (
+        "MANIFOLD",
+        "Manifold",
+        "Fastest solver for manifold meshes",
+    ),
+    (
+        "EXACT",
+        "Exact",
+        "Best results for overlapping and coplanar geometry",
+    ),
+    (
+        "FLOAT",
+        "Float",
+        "Simple fast solver without overlapping geometry support",
+    ),
+)
+
+
+def _mesh_object_poll(
+    _settings: bpy.types.PropertyGroup, obj: bpy.types.Object
+) -> bool:
+    """Only offer mesh objects in the Boolean operand picker."""
+    return obj.type == "MESH"
 
 
 class _SelectableMixturePart(Protocol):
@@ -96,6 +123,20 @@ class SiliconeMoldingProperties(bpy.types.PropertyGroup):
         name="Even Thickness",
         description="Keep the requested wall thickness around corners",
         default=True,
+    )
+
+    boolean_operand: PointerProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Operand",
+        description="Mesh object used by the Boolean modifier",
+        type=bpy.types.Object,
+        poll=_mesh_object_poll,
+    )
+
+    boolean_solver: EnumProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Solver",
+        description="Method used to calculate the Boolean operation",
+        items=_BOOLEAN_SOLVERS,
+        default="EXACT",
     )
 
     # Deliberately no ``unit="VOLUME"``, for the same reason as above: it

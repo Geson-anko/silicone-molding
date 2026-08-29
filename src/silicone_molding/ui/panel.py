@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 from ..core import MixtureBreakdown, calculate_mixture, format_grams, format_ml
 from ..operators import (
+    SILMOLD_OT_add_boolean,
     SILMOLD_OT_add_mixture_part,
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_copy_value,
@@ -437,5 +438,21 @@ class SILMOLD_PT_processing(bpy.types.Panel):
         row.prop(props, "solidify_even_thickness")
         layout.operator(SILMOLD_OT_solidify.bl_idname, icon="MOD_SOLIDIFY")
         layout.operator(SILMOLD_OT_apply_solidify.bl_idname)
+        layout.separator()
+        boolean = layout.box()
+        boolean.label(text="Boolean", icon="MOD_BOOLEAN")
+        boolean.prop(props, "boolean_operand")
+        boolean.prop(props, "boolean_solver", expand=True)
+        operations = boolean.row(align=True)
+        for operation, label in (
+            ("DIFFERENCE", "Difference"),
+            ("UNION", "Union"),
+            ("INTERSECT", "Intersect"),
+        ):
+            button = operations.operator(
+                SILMOLD_OT_add_boolean.bl_idname,
+                text=label,
+            )
+            button.operation = operation
         layout.separator()
         layout.operator(SILMOLD_OT_export_stl.bl_idname, icon="EXPORT")

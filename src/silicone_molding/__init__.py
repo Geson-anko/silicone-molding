@@ -8,6 +8,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from .operators import (
+    SILMOLD_OT_add_boolean,
     SILMOLD_OT_add_mixture_part,
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_copy_value,
@@ -36,6 +37,7 @@ from .ui import (
 _CLASSES = (
     SiliconeMoldingMixturePart,
     SiliconeMoldingProperties,
+    SILMOLD_OT_add_boolean,
     SILMOLD_OT_solidify,
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_measure_volume,

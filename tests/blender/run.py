@@ -103,6 +103,7 @@ def check_addon_is_enabled() -> None:
         "measure_volume",
         "copy_value",
         "export_stl",
+        "add_boolean",
         "add_mixture_part",
         "remove_mixture_parts",
         "move_mixture_parts",
@@ -124,6 +125,8 @@ def check_scene_properties() -> None:
         "solidify_even_thickness",
         "volume_ml",
         "volume_measured",
+        "boolean_operand",
+        "boolean_solver",
         "mixture_use_shared_density",
         "mixture_density_a_g_per_ml",
         "mixture_density_b_g_per_ml",
@@ -256,6 +259,40 @@ def check_solidify_then_apply_gives_a_double_walled_cube() -> None:
         assert (
             abs(high - EXPECTED_EXTENT) <= TOLERANCE
         ), f"{label} max is {high}, expected {EXPECTED_EXTENT} (tol {TOLERANCE})"
+
+
+def check_boolean_modifier_uses_the_requested_inputs() -> None:
+    """The installed operator must configure one modifier on the active
+    mesh."""
+    _deselect_everything()
+    bpy.ops.mesh.primitive_cube_add(size=CUBE_SIZE, location=(0.0, 0.0, 0.0))
+    target = bpy.context.active_object
+    assert target is not None, "primitive_cube_add did not create the target"
+
+    bpy.ops.mesh.primitive_cube_add(size=CUBE_SIZE, location=(1.0, 0.0, 0.0))
+    operand = bpy.context.active_object
+    assert operand is not None, "primitive_cube_add did not create the operand"
+    operand.select_set(False)
+    target.select_set(True)
+    bpy.context.view_layer.objects.active = target
+
+    settings = bpy.context.scene.silicone_molding
+    settings.boolean_operand = operand
+    settings.boolean_solver = "MANIFOLD"
+    result = bpy.ops.silicone_molding.add_boolean(operation="UNION")
+
+    assert result == {"FINISHED"}, f"add_boolean returned {result}"
+    boolean_modifiers = [
+        modifier for modifier in target.modifiers if modifier.type == "BOOLEAN"
+    ]
+    assert (
+        len(boolean_modifiers) == 1
+    ), f"expected one Boolean modifier, got {[m.type for m in target.modifiers]}"
+    modifier = boolean_modifiers[0]
+    assert modifier.operand_type == "OBJECT"
+    assert modifier.object == operand
+    assert modifier.operation == "UNION"
+    assert modifier.solver == "MANIFOLD"
 
 
 def _deselect_everything() -> None:
@@ -410,6 +447,7 @@ CHECKS = (
     check_scene_properties,
     check_mixture_part_operations,
     check_solidify_then_apply_gives_a_double_walled_cube,
+    check_boolean_modifier_uses_the_requested_inputs,
     check_measuring_a_closed_cube_stores_its_millilitres,
     check_an_open_mesh_clears_the_stored_measurement,
     check_copying_a_value_finishes,
