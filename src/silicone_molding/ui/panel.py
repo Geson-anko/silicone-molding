@@ -47,6 +47,29 @@ class _MixtureSettings(Protocol):
     mixture_parts: Iterable[_MixturePartValues]
 
 
+def _mixture_input_columns(
+    layout: bpy.types.UILayout,
+) -> tuple[
+    bpy.types.UILayout,
+    bpy.types.UILayout,
+    bpy.types.UILayout,
+    bpy.types.UILayout,
+]:
+    """Split an input line into narrow selection/use and wide value columns."""
+    selection_split = layout.split(factor=0.09, align=True)
+    selection = selection_split.row(align=True)
+    remaining = selection_split.row(align=True)
+
+    enabled_split = remaining.split(factor=0.18, align=True)
+    enabled = enabled_split.row(align=True)
+    fields = enabled_split.row(align=True)
+
+    field_split = fields.split(factor=0.58, align=True)
+    name = field_split.row(align=True)
+    volume = field_split.row(align=True)
+    return selection, enabled, name, volume
+
+
 def _mixture_breakdown(props: _MixtureSettings, volume_ml: float) -> MixtureBreakdown:
     """Calculate one row using the density mode currently shown in the UI."""
     density_b = (
@@ -65,21 +88,21 @@ def _mixture_breakdown(props: _MixtureSettings, volume_ml: float) -> MixtureBrea
 
 def _draw_mixture_input_header(layout: bpy.types.UILayout) -> None:
     """Draw headings for the editable first line of every table row."""
-    grid = layout.grid_flow(columns=4, even_columns=True, align=True)
-    grid.label(text="")
-    grid.label(text="Enabled")
-    grid.label(text="Name")
-    grid.label(text="Volume (mL)")
+    selection, enabled, name, volume = _mixture_input_columns(layout)
+    selection.label(text="")
+    enabled.label(text="Enabled")
+    name.label(text="Name")
+    volume.label(text="Volume (mL)")
 
 
 def _draw_mixture_output_header(layout: bpy.types.UILayout) -> None:
     """Draw headings for the calculated second line of every table row."""
     grid = layout.grid_flow(columns=5, even_columns=True, align=True)
-    grid.label(text="Weight (g)")
-    grid.label(text="A Vol.")
-    grid.label(text="B Vol.")
-    grid.label(text="A Weight")
-    grid.label(text="B Weight")
+    grid.label(text="W (g)")
+    grid.label(text="A V")
+    grid.label(text="B V")
+    grid.label(text="A W")
+    grid.label(text="B W")
 
 
 def _draw_mixture_output_values(
@@ -105,23 +128,24 @@ def _draw_mixture_part(
     index: int,
 ) -> None:
     """Draw one editable input line and its derived output line."""
-    box = layout.box()
-    grid = box.grid_flow(columns=4, even_columns=True, align=True)
-    select = grid.operator(
+    block = layout.column(align=True)
+    selection, enabled, name, volume = _mixture_input_columns(block)
+    select = selection.operator(
         SILMOLD_OT_select_mixture_part.bl_idname,
         text="",
         icon="CHECKBOX_HLT" if part.selected else "CHECKBOX_DEHLT",
         emboss=False,
     )
     select.index = index
-    grid.prop(part, "enabled", text="")
-    grid.prop(part, "part_name", text="")
-    grid.prop(part, "volume_ml", text="")
+    enabled.prop(part, "enabled", text="")
+    name.prop(part, "part_name", text="")
+    volume.prop(part, "volume_ml", text="")
     _draw_mixture_output_values(
-        box,
+        block,
         _mixture_breakdown(props, part.volume_ml),
         enabled=part.enabled,
     )
+    layout.separator(factor=0.35)
 
 
 def _draw_mixture_summary(
@@ -131,11 +155,11 @@ def _draw_mixture_summary(
     volume_ml: float,
 ) -> None:
     """Draw one subtotal using the same columns as a part."""
-    box = layout.box()
-    heading = box.row(align=True)
+    block = layout.column(align=True)
+    heading = block.row(align=True)
     heading.label(text=label)
     heading.label(text=f"{format_ml(volume_ml)} mL")
-    _draw_mixture_output_values(box, _mixture_breakdown(props, volume_ml))
+    _draw_mixture_output_values(block, _mixture_breakdown(props, volume_ml))
 
 
 def _included_mixture_volume(
@@ -172,6 +196,7 @@ def _draw_mixture_calculator(
     ratio.prop(props, "mixture_ratio_b", text="Ratio B")
 
     _draw_mixture_input_header(layout)
+    layout.label(text="Outputs: volume mL / weight g")
     _draw_mixture_output_header(layout)
     for index, part in enumerate(props.mixture_parts):
         _draw_mixture_part(layout, props, part, index)
@@ -202,6 +227,7 @@ def _draw_mixture_calculator(
     if any_selected:
         selected_volume = _included_mixture_volume(props, selected_only=True)
         _draw_mixture_summary(layout, props, "Selected", selected_volume)
+        layout.separator(factor=0.35)
 
     total_volume = _included_mixture_volume(props)
     _draw_mixture_summary(layout, props, "Total", total_volume)
