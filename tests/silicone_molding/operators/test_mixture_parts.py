@@ -24,6 +24,7 @@ def settings(registered: None) -> Iterator[bpy.types.PropertyGroup]:
     props = bpy.context.scene.silicone_molding
     props.mixture_parts.clear()
     props.mixture_selection_anchor = -1
+    props.mixture_active_index = -1
     props.mixture_use_shared_density = True
     props.mixture_density_a_g_per_ml = 1.1
     props.mixture_density_b_g_per_ml = 1.1
@@ -32,6 +33,7 @@ def settings(registered: None) -> Iterator[bpy.types.PropertyGroup]:
     yield props
     props.mixture_parts.clear()
     props.mixture_selection_anchor = -1
+    props.mixture_active_index = -1
     props.mixture_use_shared_density = True
     props.mixture_density_a_g_per_ml = 1.1
     props.mixture_density_b_g_per_ml = 1.1
@@ -47,19 +49,6 @@ def _add_parts(props: bpy.types.PropertyGroup, *names: str) -> None:
 
 def _selected_indices(props: bpy.types.PropertyGroup) -> list[int]:
     return [index for index, part in enumerate(props.mixture_parts) if part.selected]
-
-
-class TestOpenCalculator:
-    def test_direct_execution_finishes_without_creating_a_window(
-        self, settings: bpy.types.PropertyGroup
-    ) -> None:
-        del settings
-        windows_before = len(bpy.context.window_manager.windows)
-
-        result = bpy.ops.silicone_molding.open_mixture_calculator()
-
-        assert result == {"FINISHED"}
-        assert len(bpy.context.window_manager.windows) == windows_before
 
 
 class TestAddAndRemove:
@@ -89,6 +78,7 @@ class TestAddAndRemove:
         assert result == {"FINISHED"}
         assert [part.part_name for part in settings.mixture_parts] == ["A", "C"]
         assert settings.mixture_selection_anchor == -1
+        assert settings.mixture_active_index == -1
 
 
 class TestMove:
@@ -111,6 +101,7 @@ class TestMove:
         ]
         assert _selected_indices(settings) == [0, 2]
         assert settings.mixture_selection_anchor == -1
+        assert settings.mixture_active_index == -1
 
     def test_down_moves_each_selected_block_one_position(
         self, settings: bpy.types.PropertyGroup
@@ -130,6 +121,7 @@ class TestMove:
             "D",
         ]
         assert _selected_indices(settings) == [2, 4]
+        assert settings.mixture_active_index == -1
 
 
 class TestSelection:
@@ -144,6 +136,7 @@ class TestSelection:
         assert result == {"FINISHED"}
         assert _selected_indices(settings) == [1]
         assert settings.mixture_selection_anchor == 1
+        assert settings.mixture_active_index == 1
 
     def test_ctrl_mode_toggles_only_the_clicked_row(
         self, settings: bpy.types.PropertyGroup
@@ -156,6 +149,7 @@ class TestSelection:
 
         assert _selected_indices(settings) == [2]
         assert settings.mixture_selection_anchor == 0
+        assert settings.mixture_active_index == 0
 
     def test_shift_mode_replaces_with_the_anchor_to_click_range(
         self, settings: bpy.types.PropertyGroup
@@ -169,6 +163,7 @@ class TestSelection:
         assert result == {"FINISHED"}
         assert _selected_indices(settings) == [1, 2, 3]
         assert settings.mixture_selection_anchor == 1
+        assert settings.mixture_active_index == 3
 
     def test_ctrl_shift_mode_adds_the_range_to_the_existing_selection(
         self, settings: bpy.types.PropertyGroup
@@ -182,6 +177,7 @@ class TestSelection:
         assert result == {"FINISHED"}
         assert _selected_indices(settings) == [1, 2, 3, 4]
         assert settings.mixture_selection_anchor == 1
+        assert settings.mixture_active_index == 3
 
     def test_shift_without_an_anchor_falls_back_to_single_selection(
         self, settings: bpy.types.PropertyGroup
@@ -193,6 +189,18 @@ class TestSelection:
 
         assert _selected_indices(settings) == [2]
         assert settings.mixture_selection_anchor == 2
+
+    def test_native_list_activation_replaces_the_saved_selection(
+        self, settings: bpy.types.PropertyGroup
+    ) -> None:
+        _add_parts(settings, "A", "B", "C")
+        settings.mixture_parts[0].selected = True
+        settings.mixture_parts[2].selected = True
+
+        settings.mixture_active_index = 1
+
+        assert _selected_indices(settings) == [1]
+        assert settings.mixture_selection_anchor == 1
 
 
 class TestTotals:

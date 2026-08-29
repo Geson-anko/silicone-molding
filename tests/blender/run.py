@@ -103,7 +103,6 @@ def check_addon_is_enabled() -> None:
         "measure_volume",
         "copy_value",
         "export_stl",
-        "open_mixture_calculator",
         "add_mixture_part",
         "remove_mixture_parts",
         "move_mixture_parts",
@@ -131,6 +130,7 @@ def check_scene_properties() -> None:
         "mixture_ratio_b",
         "mixture_parts",
         "mixture_selection_anchor",
+        "mixture_active_index",
     ):
         assert name in names, f"{name} is missing; scene settings have {sorted(names)}"
 
@@ -183,6 +183,7 @@ def check_mixture_settings_survive_save_and_reload() -> None:
     lid.part_name = "Lid"
     lid.volume_ml = 30.0
     settings.mixture_selection_anchor = 1
+    settings.mixture_active_index = 1
 
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / "mixture-round-trip.blend"
@@ -202,6 +203,7 @@ def check_mixture_settings_survive_save_and_reload() -> None:
         assert [part.selected for part in loaded.mixture_parts] == [False, True]
         assert [part.volume_ml for part in loaded.mixture_parts] == [60.0, 30.0]
         assert loaded.mixture_selection_anchor == -1
+        assert loaded.mixture_active_index == -1
 
 
 def check_solidify_then_apply_gives_a_double_walled_cube() -> None:

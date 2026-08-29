@@ -20,7 +20,9 @@ import pytest
 from silicone_molding.ui import (
     SILMOLD_PT_main,
     SILMOLD_PT_measurement,
+    SILMOLD_PT_mixture_calculator,
     SILMOLD_PT_processing,
+    SILMOLD_UL_mixture_parts,
 )
 
 
@@ -60,6 +62,16 @@ class TestTheSubPanelsAreOpenAndAlwaysVisible:
         assert not hasattr(SILMOLD_PT_processing, "poll")
 
 
+class TestMixtureCalculatorPopover:
+    def test_the_calculator_is_a_wide_view3d_popover(self) -> None:
+        assert SILMOLD_PT_mixture_calculator.bl_space_type == "VIEW_3D"
+        assert SILMOLD_PT_mixture_calculator.bl_region_type == "HEADER"
+        assert SILMOLD_PT_mixture_calculator.bl_ui_units_x >= 40
+
+    def test_the_mixture_rows_use_a_native_ui_list(self) -> None:
+        assert SILMOLD_UL_mixture_parts.bl_idname == "SILMOLD_UL_mixture_parts"
+
+
 @pytest.mark.api_contract
 class TestPublicSurface:
     """Contract pins, not behaviour tests.
@@ -82,3 +94,8 @@ class TestPublicSurface:
     def test_the_processing_panel_keeps_its_idname(self) -> None:
         # AC-61
         assert SILMOLD_PT_processing.bl_idname == "SILMOLD_PT_processing"
+
+    def test_the_calculator_popover_keeps_its_idname(self) -> None:
+        assert (
+            SILMOLD_PT_mixture_calculator.bl_idname == "SILMOLD_PT_mixture_calculator"
+        )

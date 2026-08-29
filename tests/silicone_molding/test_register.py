@@ -48,7 +48,6 @@ class TestRegistration:
     ) -> None:
         operators = dir(bpy.ops.silicone_molding)
         for name in (
-            "open_mixture_calculator",
             "add_mixture_part",
             "remove_mixture_parts",
             "move_mixture_parts",
@@ -67,7 +66,9 @@ class TestRegistration:
         types = dir(bpy.types)
         assert "SILMOLD_PT_main" in types
         assert "SILMOLD_PT_measurement" in types
+        assert "SILMOLD_PT_mixture_calculator" in types
         assert "SILMOLD_PT_processing" in types
+        assert "SILMOLD_UL_mixture_parts" in types
 
 
 class TestSolidifySettings:
@@ -128,6 +129,7 @@ class TestMixtureSettings:
             "mixture_ratio_b",
             "mixture_parts",
             "mixture_selection_anchor",
+            "mixture_active_index",
         ):
             assert name in properties
 
