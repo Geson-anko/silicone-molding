@@ -1,7 +1,7 @@
 """Operator that exports the selected meshes with fixed STL settings."""
 
 import os
-from typing import cast, override
+from typing import Final, cast, override
 
 import bpy
 from bpy.props import BoolProperty, StringProperty
@@ -10,6 +10,7 @@ from .solidify import OperatorReturn
 
 _STL_EXTENSION = ".stl"
 _EXPORT_SCALE = 1000.0
+_LAST_EXPORT_DIRECTORY_KEY: Final = "_silicone_molding_last_stl_export_directory"
 
 
 def _selected_meshes(context: bpy.types.Context) -> list[bpy.types.Object]:
@@ -18,12 +19,18 @@ def _selected_meshes(context: bpy.types.Context) -> list[bpy.types.Object]:
 
 
 def _default_filepath(context: bpy.types.Context) -> str:
-    """Build the initial STL path from the active selected mesh's name."""
+    """Build the initial STL path from the previous folder and mesh name."""
     meshes = _selected_meshes(context)
     active = context.active_object
     source = active if active in meshes else meshes[0]
     filename = f"{source.name}{_STL_EXTENSION}"
-    return os.path.join(bpy.path.abspath("//"), filename)
+    directory = cast(
+        str,
+        context.window_manager.get(_LAST_EXPORT_DIRECTORY_KEY, ""),
+    )
+    if not directory:
+        directory = bpy.path.abspath("//")
+    return os.path.join(directory, filename)
 
 
 class SILMOLD_OT_export_stl(bpy.types.Operator):
@@ -88,5 +95,8 @@ class SILMOLD_OT_export_stl(bpy.types.Operator):
             global_scale=_EXPORT_SCALE,
         )
         if "FINISHED" in result:
+            context.window_manager[_LAST_EXPORT_DIRECTORY_KEY] = os.path.dirname(
+                filepath
+            )
             self.report({"INFO"}, f"Exported STL: {os.path.basename(filepath)}")
         return result

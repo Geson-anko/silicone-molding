@@ -15,7 +15,10 @@ from _helpers import make_cube_mesh
 
 import silicone_molding
 from silicone_molding.operators import SILMOLD_OT_export_stl
-from silicone_molding.operators.export_stl import _default_filepath
+from silicone_molding.operators.export_stl import (
+    _LAST_EXPORT_DIRECTORY_KEY,
+    _default_filepath,
+)
 
 PLANE_HALF_SIZE = 1.0
 SOLIDIFY_THICKNESS = 1.0
@@ -35,6 +38,17 @@ def registered() -> Iterator[None]:
     silicone_molding.register()
     yield
     silicone_molding.unregister()
+
+
+@pytest.fixture(autouse=True)
+def reset_export_directory(registered: None) -> Iterator[None]:
+    """Keep the remembered runtime directory from leaking between tests."""
+    window_manager = bpy.context.window_manager
+    if _LAST_EXPORT_DIRECTORY_KEY in window_manager:
+        del window_manager[_LAST_EXPORT_DIRECTORY_KEY]
+    yield
+    if _LAST_EXPORT_DIRECTORY_KEY in window_manager:
+        del window_manager[_LAST_EXPORT_DIRECTORY_KEY]
 
 
 @pytest.fixture
@@ -121,6 +135,33 @@ class TestExportStlOperator:
         filepath = _default_filepath(bpy.context)
 
         assert os.path.basename(filepath) == "Upper Mold.stl"
+
+    def test_the_initial_directory_comes_from_the_blend_file(
+        self, add_object: AddObject
+    ) -> None:
+        active = add_object("Mold", make_cube_mesh(2.0, "MoldMesh"))
+        bpy.context.view_layer.objects.active = active
+
+        filepath = _default_filepath(bpy.context)
+
+        assert os.path.dirname(filepath) == bpy.path.abspath("//")
+
+    def test_the_next_default_directory_is_where_the_previous_export_finished(
+        self, add_object: AddObject, tmp_path: Path
+    ) -> None:
+        active = add_object("Mold", make_cube_mesh(2.0, "MoldMesh"))
+        bpy.context.view_layer.objects.active = active
+        export_directory = tmp_path / "exports"
+        export_directory.mkdir()
+
+        result = bpy.ops.silicone_molding.export_stl(
+            filepath=str(export_directory / "First Mold")
+        )
+        filepath = _default_filepath(bpy.context)
+
+        assert result == {"FINISHED"}
+        assert os.path.dirname(filepath) == str(export_directory)
+        assert os.path.basename(filepath) == "Mold.stl"
 
     def test_export_uses_selection_modifiers_and_scale_1000(
         self, add_object: AddObject, tmp_path: Path
