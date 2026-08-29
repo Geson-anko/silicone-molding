@@ -2,6 +2,7 @@
 context."""
 
 from .mixture import MixtureBreakdown, calculate_mixture
+from .separate_loose_parts import separate_loose_parts
 from .solidify import (
     MIN_THICKNESS_MM,
     MODIFIER_NAME,
@@ -25,6 +26,7 @@ __all__ = [
     "format_grams",
     "format_ml",
     "mm_to_units",
+    "separate_loose_parts",
     "total_volume",
     "world_volume",
 ]

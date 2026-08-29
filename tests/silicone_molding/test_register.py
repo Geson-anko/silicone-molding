@@ -47,6 +47,13 @@ class TestRegistration:
         operators = dir(bpy.ops.silicone_molding)
         assert "add_boolean" in operators
 
+    def test_both_split_workflow_operators_become_callable(
+        self, registered: None
+    ) -> None:
+        operators = dir(bpy.ops.silicone_molding)
+        assert "add_surface_cut" in operators
+        assert "separate_loose_parts" in operators
+
     def test_the_inherit_shape_operator_becomes_callable(
         self, registered: None
     ) -> None:

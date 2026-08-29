@@ -11,7 +11,11 @@ import pytest
 from _helpers import make_cube_mesh
 
 import silicone_molding
-from silicone_molding.operators import SILMOLD_OT_add_boolean
+from silicone_molding.core import find_solidify
+from silicone_molding.operators import (
+    SILMOLD_OT_add_boolean,
+    SILMOLD_OT_add_surface_cut,
+)
 
 CUBE_SIZE = 2.0
 
@@ -189,9 +193,66 @@ class TestAddingABooleanModifier:
         assert len(other.modifiers) == 0
 
 
+class TestAddingASurfaceCut:
+    def test_the_operand_becomes_a_one_micron_cutting_solid(
+        self, settings: bpy.types.PropertyGroup, add_object: AddObject
+    ) -> None:
+        _target, surface = _set_inputs(settings, add_object)
+        original_scale = bpy.context.scene.unit_settings.scale_length
+        bpy.context.scene.unit_settings.scale_length = 0.001
+
+        try:
+            result = bpy.ops.silicone_molding.add_surface_cut()
+        finally:
+            bpy.context.scene.unit_settings.scale_length = original_scale
+
+        assert result == {"FINISHED"}
+        modifier = find_solidify(surface)
+        assert modifier is not None
+        # One micron is 0.001 BU when one BU represents one millimetre.
+        assert modifier.thickness == pytest.approx(0.001)
+        assert modifier.offset == -1.0
+        assert not modifier.use_even_offset
+
+    def test_the_active_mesh_gets_a_manifold_difference(
+        self, settings: bpy.types.PropertyGroup, add_object: AddObject
+    ) -> None:
+        target, surface = _set_inputs(settings, add_object)
+        settings.boolean_solver = "FLOAT"
+
+        result = bpy.ops.silicone_molding.add_surface_cut()
+
+        assert result == {"FINISHED"}
+        modifier = target.modifiers[0]
+        assert modifier.type == "BOOLEAN"
+        assert modifier.operand_type == "OBJECT"
+        assert modifier.object == surface
+        assert modifier.operation == "DIFFERENCE"
+        assert modifier.solver == "MANIFOLD"
+
+    def test_repeating_the_action_reuses_the_cutters_solidify_modifier(
+        self, settings: bpy.types.PropertyGroup, add_object: AddObject
+    ) -> None:
+        target, surface = _set_inputs(settings, add_object)
+
+        bpy.ops.silicone_molding.add_surface_cut()
+        bpy.ops.silicone_molding.add_surface_cut()
+
+        assert len(surface.modifiers) == 1
+        assert [modifier.type for modifier in target.modifiers] == [
+            "BOOLEAN",
+            "BOOLEAN",
+        ]
+
+
 @pytest.mark.api_contract
 def test_boolean_operator_keeps_its_public_surface(registered: None) -> None:
     assert SILMOLD_OT_add_boolean.bl_idname == "silicone_molding.add_boolean"
     properties = bpy.ops.silicone_molding.add_boolean.get_rna_type().properties
     identifiers = {item.identifier for item in properties["operation"].enum_items}
     assert identifiers == {"DIFFERENCE", "UNION", "INTERSECT"}
+
+
+@pytest.mark.api_contract
+def test_surface_cut_operator_keeps_its_public_idname(registered: None) -> None:
+    assert SILMOLD_OT_add_surface_cut.bl_idname == "silicone_molding.add_surface_cut"

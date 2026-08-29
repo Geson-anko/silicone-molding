@@ -66,6 +66,21 @@ STL_EXPORT_SCALE = 1000.0
 STL_FAR_OBJECT_X = 10.0
 STL_TOLERANCE = 1e-4
 
+# The surface-cut workflow gives its operand a one-micron thickness. With the
+# default metre-scale scene this is 1e-6 Blender units.
+SURFACE_CUT_THICKNESS = 1e-6
+SURFACE_CUT_TOLERANCE = 1e-9
+
+LOOSE_PART_VERTICES = [
+    (0.0, 0.0, 0.0),
+    (1.0, 0.0, 0.0),
+    (0.0, 1.0, 0.0),
+    (3.0, 0.0, 0.0),
+    (4.0, 0.0, 0.0),
+    (3.0, 1.0, 0.0),
+]
+LOOSE_PART_FACES = [(0, 1, 2), (3, 4, 5)]
+
 _HALF = MEASURED_CUBE_SIZE / 2.0
 # A cube with its top face left off: the four edges around the hole are
 # boundary edges, so this mesh has no defined volume.
@@ -104,6 +119,8 @@ def check_addon_is_enabled() -> None:
         "copy_value",
         "export_stl",
         "add_boolean",
+        "add_surface_cut",
+        "separate_loose_parts",
         "inherit_shape",
         "add_mixture_part",
         "remove_mixture_parts",
@@ -296,6 +313,67 @@ def check_boolean_modifier_uses_the_requested_inputs() -> None:
     assert modifier.solver == "MANIFOLD"
 
 
+def check_surface_cut_configures_both_modifier_stacks() -> None:
+    """The installed workflow must prepare a thin Manifold Difference."""
+    _deselect_everything()
+    bpy.ops.mesh.primitive_cube_add(size=CUBE_SIZE)
+    target = bpy.context.active_object
+    assert target is not None, "primitive_cube_add did not create the target"
+
+    mesh = bpy.data.meshes.new("SurfaceCutMesh")
+    mesh.from_pydata(
+        [(-2.0, -2.0, 0.0), (2.0, -2.0, 0.0), (2.0, 2.0, 0.0)],
+        [],
+        [(0, 1, 2)],
+    )
+    surface = bpy.data.objects.new("SurfaceCut", mesh)
+    bpy.context.scene.collection.objects.link(surface)
+    target.select_set(True)
+    bpy.context.view_layer.objects.active = target
+
+    settings = bpy.context.scene.silicone_molding
+    settings.boolean_operand = surface
+    settings.boolean_solver = "FLOAT"
+    result = bpy.ops.silicone_molding.add_surface_cut()
+
+    assert result == {"FINISHED"}, f"add_surface_cut returned {result}"
+    solidify = surface.modifiers.get(MODIFIER_NAME)
+    assert solidify is not None, "surface cut did not solidify its operand"
+    assert solidify.type == "SOLIDIFY"
+    assert abs(solidify.thickness - SURFACE_CUT_THICKNESS) <= SURFACE_CUT_TOLERANCE
+    assert solidify.offset == -1.0
+    assert not solidify.use_even_offset
+
+    boolean_modifiers = [
+        modifier for modifier in target.modifiers if modifier.type == "BOOLEAN"
+    ]
+    assert len(boolean_modifiers) == 1
+    boolean = boolean_modifiers[0]
+    assert boolean.object == surface
+    assert boolean.operation == "DIFFERENCE"
+    assert boolean.solver == "MANIFOLD"
+
+
+def check_loose_parts_become_separate_objects() -> None:
+    """The installed operator must create one selected object per part."""
+    _deselect_everything()
+    mesh = bpy.data.meshes.new("LoosePartsMesh")
+    mesh.from_pydata(LOOSE_PART_VERTICES, [], LOOSE_PART_FACES)
+    source = bpy.data.objects.new("LooseParts", mesh)
+    bpy.context.scene.collection.objects.link(source)
+    source.select_set(True)
+    bpy.context.view_layer.objects.active = source
+
+    result = bpy.ops.silicone_molding.separate_loose_parts()
+
+    assert result == {"FINISHED"}, f"separate_loose_parts returned {result}"
+    parts = [obj for obj in bpy.context.selected_objects if obj.type == "MESH"]
+    assert len(parts) == 2, f"expected 2 parts, got {[obj.name for obj in parts]}"
+    assert bpy.context.active_object == source
+    assert all(len(obj.data.vertices) == 3 for obj in parts)
+    assert all(len(obj.data.polygons) == 1 for obj in parts)
+
+
 def _deselect_everything() -> None:
     """Clear the selection, which the startup file leaves on its cube."""
     for existing in bpy.context.scene.objects:
@@ -449,6 +527,8 @@ CHECKS = (
     check_mixture_part_operations,
     check_solidify_then_apply_gives_a_double_walled_cube,
     check_boolean_modifier_uses_the_requested_inputs,
+    check_surface_cut_configures_both_modifier_stacks,
+    check_loose_parts_become_separate_objects,
     check_measuring_a_closed_cube_stores_its_millilitres,
     check_an_open_mesh_clears_the_stored_measurement,
     check_copying_a_value_finishes,
