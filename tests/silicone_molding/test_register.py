@@ -147,12 +147,12 @@ class TestMixtureSettings:
     def test_mixture_settings_have_the_documented_defaults(
         self, registered: None
     ) -> None:
-        settings = bpy.context.scene.silicone_molding
-        assert settings.mixture_use_shared_density
-        assert settings.mixture_density_a_g_per_ml == pytest.approx(1.1)
-        assert settings.mixture_density_b_g_per_ml == pytest.approx(1.1)
-        assert settings.mixture_ratio_a == pytest.approx(1.0)
-        assert settings.mixture_ratio_b == pytest.approx(1.0)
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert properties["mixture_use_shared_density"].default is True
+        assert properties["mixture_density_a_g_per_ml"].default == pytest.approx(1.1)
+        assert properties["mixture_density_b_g_per_ml"].default == pytest.approx(1.1)
+        assert properties["mixture_ratio_a"].default == pytest.approx(1.0)
+        assert properties["mixture_ratio_b"].default == pytest.approx(1.0)
 
     def test_density_and_ratio_are_clamped_to_positive_values(
         self, registered: None

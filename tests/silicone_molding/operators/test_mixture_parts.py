@@ -24,9 +24,19 @@ def settings(registered: None) -> Iterator[bpy.types.PropertyGroup]:
     props = bpy.context.scene.silicone_molding
     props.mixture_parts.clear()
     props.mixture_selection_anchor = -1
+    props.mixture_use_shared_density = True
+    props.mixture_density_a_g_per_ml = 1.1
+    props.mixture_density_b_g_per_ml = 1.1
+    props.mixture_ratio_a = 1.0
+    props.mixture_ratio_b = 1.0
     yield props
     props.mixture_parts.clear()
     props.mixture_selection_anchor = -1
+    props.mixture_use_shared_density = True
+    props.mixture_density_a_g_per_ml = 1.1
+    props.mixture_density_b_g_per_ml = 1.1
+    props.mixture_ratio_a = 1.0
+    props.mixture_ratio_b = 1.0
 
 
 def _add_parts(props: bpy.types.PropertyGroup, *names: str) -> None:
