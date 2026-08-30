@@ -473,15 +473,19 @@ def draw_color_simulator(
     colorants.label(text="3. Add Colorants and Enter the Actual Drops")
     colorants.label(
         text=(
-            "Colored: set observed color and drops/mL per dye; White: enable "
-            "Opacifier (1 drop/mL = opaque)"
+            "All dyes: Calibration Drops / mL gives observed color and opacity "
+            "(1.0 default)"
         ),
+        icon="INFO",
+    )
+    colorants.label(
+        text="White: enable White / Lighten to also make other colors paler",
         icon="INFO",
     )
     header = colorants.row(align=True)
     for text in (
         "On",
-        "White / Opaque",
+        "White / Lighten",
         "Dye",
         "Calibration Color",
         "Calibration Drops / mL",

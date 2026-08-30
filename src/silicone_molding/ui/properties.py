@@ -148,10 +148,10 @@ class SiliconeMoldingColorant(bpy.types.PropertyGroup):
     )
 
     is_opacifier: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
-        name="White Opacifier",
+        name="White / Lighten",
         description=(
-            "Treat this as white opacifier; at Calibration Drops / mL the "
-            "result becomes fully opaque and milky"
+            "Treat this as white pigment that additionally lightens other dyes "
+            "toward Calibration Color and makes the result milky"
         ),
         default=False,
         update=_update_colorant,

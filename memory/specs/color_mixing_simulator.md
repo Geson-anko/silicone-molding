@@ -21,27 +21,33 @@ contribution = max(CalibrationAbsorbance - BaseAbsorbance, 0)
 チャンネルは、染料が明るくしたものとは扱わず寄与0とする。
 校正濃度の既定値は経験則の1.0滴/mLとするが、染料ごとの実測値へ変更できる。
 
-RGBだけでは通常の白と白色不透明化剤を区別できないため、染料行には
-`White Opacifier` を持たせる。オンの行について、校正濃度に対する実濃度の比を
-加算して1.0で上限を取り、次のように透明度と濁りへ反映する。
+全染料は校正濃度に対する実濃度の比を合計し、1.0で上限を取って透明度へ反映
+する。したがって既定では、色にかかわらずシリコーン1mLあたり染料合計1滴程度で
+不透明になる。
+
+RGBだけでは通常染料と、他の色を薄める白色顔料を区別できないため、染料行には
+`White / Lighten` を持たせる。通常染料だけを上記の吸光度混色へ入れ、白色行は
+校正色を白の到達色として使う。白色濃度の比で、吸光混色後の色から白の校正色へ
+scene-linear RGB上で補間する。複数の白色行があれば濃度加重平均を到達色とする。
 
 ```text
-opacity = clamp(sum(concentration of enabled white opacifiers), 0, 1)
+opacity = clamp(sum(concentration of all enabled dyes), 0, 1)
+white = clamp(sum(concentration of enabled white dyes), 0, 1)
+ResultColor = lerp(SubtractiveDyeColor, CalibratedWhiteColor, white)
 ResultTransparency = BaseTransparency * (1 - opacity)
-ResultCloudiness = BaseCloudiness + (1 - BaseCloudiness) * opacity
+ResultCloudiness = BaseCloudiness + (1 - BaseCloudiness) * white
 ```
 
-したがって既定の1.0滴/mLでは、シリコーン1mLあたり白色染料1滴で
-`ResultTransparency = 0`、`ResultCloudiness = 1`となる。それ未満は線形補間し、
-染料固有の差が分かった場合は校正濃度を変更する。通常の染料は透明度と濁りを
-変えない。
+色付き染料も校正濃度で`ResultTransparency = 0`になる。白色染料はそれに加えて、
+校正濃度で`ResultColor = CalibratedWhiteColor`、`ResultCloudiness = 1`になる。
+それ未満は線形補間し、染料固有の差が分かった場合は校正濃度を変更する。
 
 ## 保存データとUI
 
 `Scene.silicone_molding` にプロファイルのリストと、最後に選択したプロファイルの
 アクティブ行番号を保存する。
 各プロファイルは名前、基準体積mL、ベース色、ベース透明度、ベース濁り、
-染料リスト、専用のマテリアルを持つ。染料行はEnabled、White Opacifier、名前、
+染料リスト、専用のマテリアルを持つ。染料行はEnabled、White / Lighten、名前、
 校正色、校正濃度（滴/mL）、実際の滴数を持つ。滴数はfloatで、小数を直接入力
 できる一方、スクロールでは1.0ずつ変化する。
 

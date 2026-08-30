@@ -118,7 +118,7 @@ class TestColorants:
             second_before
         )
 
-    def test_white_opacifier_updates_material_appearance(
+    def test_all_dyes_reduce_transmission_and_white_also_lightens_the_color(
         self, settings: bpy.types.PropertyGroup
     ) -> None:
         profile = _add_profile(settings)
@@ -126,15 +126,25 @@ class TestColorants:
         profile.transparency = 0.8
         profile.cloudiness = 0.2
         bpy.ops.silicone_molding.add_colorant()
-        white = profile.colorants[0]
+        blue = profile.colorants[0]
+        blue.calibration_color = (0.2, 0.4, 0.8)
+        blue.drops = 1.0
+
+        shader = profile.preview_material.node_tree.nodes[_SHADER_NODE_NAME]
+
+        assert tuple(profile.result_color) == pytest.approx((0.2, 0.4, 0.8))
+        assert shader.inputs["Transmission Weight"].default_value == pytest.approx(0.0)
+
+        bpy.ops.silicone_molding.add_colorant()
+        white = profile.colorants[1]
         white.is_opacifier = True
-        white.drops = 1.0
+        white.drops = 0.5
 
         shader = profile.preview_material.node_tree.nodes[_SHADER_NODE_NAME]
 
         assert shader.inputs["Transmission Weight"].default_value == pytest.approx(0.0)
-        assert shader.inputs["Subsurface Weight"].default_value == pytest.approx(1.0)
-        assert tuple(profile.result_color) == pytest.approx(tuple(profile.base_color))
+        assert shader.inputs["Subsurface Weight"].default_value == pytest.approx(0.6)
+        assert tuple(profile.result_color) == pytest.approx((0.6, 0.7, 0.9))
 
 
 class TestMixtureVolumeCopy:

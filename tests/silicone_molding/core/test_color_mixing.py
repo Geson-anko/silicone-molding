@@ -82,7 +82,7 @@ def test_non_positive_calibration_drops_are_rejected_when_used() -> None:
         simulate_silicone_color(WHITE, 100.0, [colorant])
 
 
-def test_white_opacifier_reaches_opaque_at_its_calibration_concentration() -> None:
+def test_white_reaches_its_color_and_opaque_appearance_at_calibration() -> None:
     white = CalibratedColorant(
         WHITE,
         1.0,
@@ -98,12 +98,13 @@ def test_white_opacifier_reaches_opaque_at_its_calibration_concentration() -> No
         [white],
     )
 
-    assert result.color == pytest.approx((1.0, 0.9, 0.7))
+    assert result.color == pytest.approx(WHITE)
     assert result.transparency == pytest.approx(0.0)
     assert result.cloudiness == pytest.approx(1.0)
 
 
-def test_white_opacifier_interpolates_below_its_calibration_concentration() -> None:
+def test_white_makes_another_dye_paler_below_its_calibration_concentration() -> None:
+    blue = CalibratedColorant((0.2, 0.4, 0.8), 1.0, 100.0)
     half_strength_white = CalibratedColorant(
         WHITE,
         1.0,
@@ -116,20 +117,44 @@ def test_white_opacifier_interpolates_below_its_calibration_concentration() -> N
         100.0,
         0.8,
         0.2,
-        [half_strength_white],
+        [blue, half_strength_white],
     )
 
-    assert result.transparency == pytest.approx(0.4)
+    assert result.color == pytest.approx((0.6, 0.7, 0.9))
+    assert result.transparency == pytest.approx(0.0)
     assert result.cloudiness == pytest.approx(0.6)
 
 
-def test_regular_dye_does_not_change_transparency_or_cloudiness() -> None:
-    dye = CalibratedColorant((0.5, 0.25, 0.125), 1.0, 100.0)
+@pytest.mark.parametrize(
+    "calibration",
+    [
+        (0.8, 0.2, 0.1),
+        (0.1, 0.3, 0.8),
+        (0.2, 0.2, 0.2),
+    ],
+)
+def test_every_dye_reaches_opaque_at_its_calibration_concentration(
+    calibration: tuple[float, float, float],
+) -> None:
+    dye = CalibratedColorant(calibration, 1.0, 100.0)
 
     result = simulate_silicone_appearance(WHITE, 100.0, 0.7, 0.3, [dye])
 
-    assert result.transparency == pytest.approx(0.7)
+    assert result.color == pytest.approx(calibration)
+    assert result.transparency == pytest.approx(0.0)
     assert result.cloudiness == pytest.approx(0.3)
+
+
+def test_half_strength_dye_halves_transparency_without_adding_white_cloudiness() -> (
+    None
+):
+    dye = CalibratedColorant((0.25, 0.64, 0.81), 1.0, 50.0)
+
+    result = simulate_silicone_appearance(WHITE, 100.0, 0.8, 0.2, [dye])
+
+    assert result.color == pytest.approx((0.5, 0.8, 0.9))
+    assert result.transparency == pytest.approx(0.4)
+    assert result.cloudiness == pytest.approx(0.2)
 
 
 def test_scene_linear_color_formats_are_copy_ready_srgb_values() -> None:

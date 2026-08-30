@@ -72,7 +72,7 @@ def simulate_silicone_color(
     total_absorbance = list(base_absorbance)
 
     for colorant in colorants:
-        if not colorant.enabled or colorant.drops <= 0.0:
+        if not colorant.enabled or colorant.is_opacifier or colorant.drops <= 0.0:
             continue
         calibration_absorbance = _absorbance(colorant.calibration_color)
         concentration_factor = _concentration_factor(colorant, base_volume_ml)
@@ -99,21 +99,53 @@ def simulate_silicone_appearance(
 ) -> SimulatedSiliconeAppearance:
     """Return color, transparency, and cloudiness for a calibrated mixture.
 
-    Opacifier rows reach fully opaque and milky at their calibration
-    concentration. Multiple opacifiers add their relative
-    concentrations, capped at the calibrated endpoint.
+    All dyes reduce transmission at their calibration concentration.
+    White rows additionally lighten the subtractive dye result toward
+    their calibrated white and increase cloudiness.
     """
     colorant_values = tuple(colorants)
     color = simulate_silicone_color(base_color, base_volume_ml, colorant_values)
-    opacifier_factor = sum(
-        _concentration_factor(colorant, base_volume_ml)
+    active_colorants = tuple(
+        (colorant, _concentration_factor(colorant, base_volume_ml))
         for colorant in colorant_values
-        if colorant.enabled and colorant.is_opacifier and colorant.drops > 0.0
+        if colorant.enabled and colorant.drops > 0.0
     )
-    opacity_factor = _clamp_unit(opacifier_factor)
+    opacity_factor = _clamp_unit(
+        sum(concentration for _colorant, concentration in active_colorants)
+    )
     transparency = _clamp_unit(base_transparency) * (1.0 - opacity_factor)
+
+    white_colorants = tuple(
+        (colorant, concentration)
+        for colorant, concentration in active_colorants
+        if colorant.is_opacifier
+    )
+    white_factor = sum(concentration for _colorant, concentration in white_colorants)
+    white_coverage = _clamp_unit(white_factor)
+    if white_factor > 0.0:
+
+        def weighted_white(channel: int) -> float:
+            return (
+                sum(
+                    _clamp_unit(colorant.calibration_color[channel]) * concentration
+                    for colorant, concentration in white_colorants
+                )
+                / white_factor
+            )
+
+        white_color: RGB = (
+            weighted_white(0),
+            weighted_white(1),
+            weighted_white(2),
+        )
+        color = (
+            color[0] + (white_color[0] - color[0]) * white_coverage,
+            color[1] + (white_color[1] - color[1]) * white_coverage,
+            color[2] + (white_color[2] - color[2]) * white_coverage,
+        )
+
     base_cloudiness = _clamp_unit(base_cloudiness)
-    cloudiness = base_cloudiness + (1.0 - base_cloudiness) * opacity_factor
+    cloudiness = base_cloudiness + (1.0 - base_cloudiness) * white_coverage
     return SimulatedSiliconeAppearance(color, transparency, cloudiness)
 
 
