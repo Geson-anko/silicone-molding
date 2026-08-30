@@ -20,7 +20,7 @@ class ColorantValues(Protocol):
     enabled: bool
     colorant_name: str
     calibration_color: Sequence[float]
-    reference_drops_per_100_ml: float
+    calibration_drops_per_ml: float
     drops: float
 
 
@@ -88,7 +88,7 @@ def calculate_profile_color(profile: ColorProfileValues) -> RGB:
     colorants = (
         CalibratedColorant(
             calibration_color=cast(RGB, tuple(colorant.calibration_color[:3])),
-            reference_drops_per_100_ml=colorant.reference_drops_per_100_ml,
+            calibration_drops_per_ml=colorant.calibration_drops_per_ml,
             drops=colorant.drops,
             enabled=colorant.enabled,
         )
@@ -108,7 +108,6 @@ def _configure_material(
     """Build or update the add-on-owned Principled material."""
     material.name = f"{_MATERIAL_PREFIX}{profile.profile_name}"
     material.use_nodes = True
-    material.preview_render_type = "SPHERE"
     node_tree = material.node_tree
     assert node_tree is not None
 
@@ -239,7 +238,7 @@ class SILMOLD_OT_add_colorant(bpy.types.Operator):
         colorant.enabled = True
         colorant.colorant_name = "Colorant"
         colorant.calibration_color = (1.0, 1.0, 1.0)
-        colorant.reference_drops_per_100_ml = 1.0
+        colorant.calibration_drops_per_ml = 1.0
         colorant.drops = 0.0
         profile.colorant_active_index = len(profile.colorants) - 1
         update_color_preview_material(profile)

@@ -397,7 +397,7 @@ class SILMOLD_UL_colorants(bpy.types.UIList):
         row.prop(colorant, "enabled", text="")
         row.prop(colorant, "colorant_name", text="")
         row.prop(colorant, "calibration_color", text="")
-        row.prop(colorant, "reference_drops_per_100_ml", text="")
+        row.prop(colorant, "calibration_drops_per_ml", text="")
         row.prop(colorant, "drops", text="")
 
 
@@ -405,11 +405,10 @@ def draw_color_simulator(
     layout: bpy.types.UILayout,
     scene_settings: bpy.types.PropertyGroup,
 ) -> None:
-    """Draw named recipes, the active calibration table, and material
-    preview."""
+    """Draw the simulator as a numbered profile-to-result workflow."""
     settings = cast(ColorSimulatorSettings, scene_settings)
     profiles = layout.box()
-    profiles.label(text="Color Profiles")
+    profiles.label(text="1. Choose a Named Profile")
     profile_row = profiles.row()
     profile_row.template_list(
         SILMOLD_UL_color_profiles.bl_idname,
@@ -434,21 +433,11 @@ def draw_color_simulator(
 
     profile = active_color_profile(settings)
     if profile is None:
-        layout.label(text="Add a profile to begin", icon="INFO")
+        layout.label(text="Press + to add the first profile", icon="INFO")
         return
 
-    body = layout.split(factor=0.38)
-    preview = body.column()
-    if profile.preview_material is not None:
-        preview.template_preview(profile.preview_material, show_buttons=False)
-    preview.operator(
-        SILMOLD_OT_apply_color_material.bl_idname,
-        icon="MATERIAL",
-    )
-
-    inputs = body.column()
-    base = inputs.box()
-    base.label(text="Silicone Base")
+    base = layout.box()
+    base.label(text="2. Set the Silicone Base")
     volume = base.row(align=True)
     volume.prop(profile, "base_volume_ml")
     volume.operator(
@@ -461,9 +450,24 @@ def draw_color_simulator(
     appearance.prop(profile, "transparency", slider=True)
     appearance.prop(profile, "cloudiness", slider=True)
 
-    colorants = inputs.box()
+    colorants = layout.box()
+    colorants.label(text="3. Add Colorants and Enter the Actual Drops")
+    colorants.label(
+        text="Calibration Color is measured at the dye-specific drops/mL below",
+        icon="INFO",
+    )
+    colorants.label(
+        text="1.0 drop/mL is a starting estimate; adjust it for each dye",
+        icon="INFO",
+    )
     header = colorants.row(align=True)
-    for text in ("On", "Name", "Calibration", "Ref / 100 mL", "Drops"):
+    for text in (
+        "On",
+        "Dye",
+        "Calibration Color",
+        "Calibration Drops / mL",
+        "Actual Drops",
+    ):
         header.label(text=text)
     colorant_row = colorants.row()
     colorant_row.template_list(
@@ -486,8 +490,20 @@ def draw_color_simulator(
         text="",
         icon="REMOVE",
     )
-    inputs.label(
-        text="Calibration colors must use this base at the stated drops / 100 mL",
+
+    result = layout.box()
+    result.label(text="4. Check the Mixed Color")
+    if profile.preview_material is not None:
+        swatch = result.row()
+        swatch.enabled = False
+        swatch.scale_y = 1.6
+        swatch.prop(profile.preview_material, "diffuse_color", text="Result Color")
+    result.operator(
+        SILMOLD_OT_apply_color_material.bl_idname,
+        icon="MATERIAL",
+    )
+    result.label(
+        text="Transparency and cloudiness appear on the applied material",
         icon="INFO",
     )
 

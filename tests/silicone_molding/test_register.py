@@ -285,7 +285,7 @@ class TestColorProfileSettings:
             "enabled",
             "colorant_name",
             "calibration_color",
-            "reference_drops_per_100_ml",
+            "calibration_drops_per_ml",
             "drops",
         ):
             assert name in colorant.bl_rna.properties

@@ -101,7 +101,7 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 - **体積計測**（Measurement）— `silicone_molding.measure_volume` が選択メッシュの体積をモディファイア込みのワールド実寸で合計し、mL で `Scene.silicone_molding` に保存する（ボタン押下時のスナップショット。閉じていないメッシュがあれば数値を出さずエラー）。`silicone_molding.copy_value` は渡された文字列をクリップボードへコピーするだけの汎用オペレータで、体積という概念を持たない
 - **STL 出力**（Processing）— `silicone_molding.export_stl` がアクティブオブジェクト名を既定名にして保存先選択を開き、選択物のみ・モディファイア適用・1000 倍の固定設定で STL を出力する。同じ Blender セッションでは、直前に出力したフォルダを次回の既定保存先にする
 - **Boolean**（Processing）— `silicone_molding.add_boolean` がアクティブな選択メッシュへ、指定した別メッシュを Operand とする Boolean モディファイアを追加する。Difference / Union / Intersect と Manifold / Exact / Float を選択できる
-- **混色シミュレータ**（Coloring）— ベースシリコーンと1点校正した任意数の染料を液滴/100mLで減法混色近似し、名前付きプロファイルとして保存する。専用材質球を自動更新し、選択メッシュへ適用できる
+- **混色シミュレータ**（Coloring）— ベースシリコーンと1点校正した任意数の染料を染料別の校正濃度（滴/mL）で減法混色近似し、名前付きプロファイルとして保存する。結果色をフラット表示し、専用マテリアルを選択メッシュへ適用できる
 
 ## ツーリング
 

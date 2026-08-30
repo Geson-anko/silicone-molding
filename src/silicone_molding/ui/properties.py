@@ -20,7 +20,7 @@ from ..core import MIN_SURFACE_CUT_THICKNESS_MM, MIN_THICKNESS_MM
 _MIN_DENSITY_G_PER_ML = 0.001
 _MIN_MIXTURE_RATIO = 0.001
 _MIN_COLORING_VOLUME_ML = 0.001
-_MIN_REFERENCE_DROPS = 0.001
+_MIN_CALIBRATION_DROPS_PER_ML = 0.001
 
 _BOOLEAN_SOLVERS = (
     (
@@ -136,7 +136,9 @@ class SiliconeMoldingColorant(bpy.types.PropertyGroup):
 
     calibration_color: FloatVectorProperty(  # pyright: ignore[reportInvalidTypeForm]
         name="Calibration Color",
-        description="Observed color at the reference dose in the current base",
+        description=(
+            "Observed color at this dye's Calibration Drops / mL in the current base"
+        ),
         subtype="COLOR",
         size=3,
         min=0.0,
@@ -145,10 +147,14 @@ class SiliconeMoldingColorant(bpy.types.PropertyGroup):
         update=_update_colorant,
     )
 
-    reference_drops_per_100_ml: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
-        name="Reference Drops / 100 mL",
+    calibration_drops_per_ml: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Calibration Drops / mL",
+        description=(
+            "Dye concentration that produced Calibration Color; 1.0 drop/mL is "
+            "only a starting estimate and can vary by dye"
+        ),
         default=1.0,
-        min=_MIN_REFERENCE_DROPS,
+        min=_MIN_CALIBRATION_DROPS_PER_ML,
         precision=2,
         step=100,
         update=_update_colorant,

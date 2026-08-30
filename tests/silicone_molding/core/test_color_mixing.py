@@ -15,9 +15,9 @@ def test_no_colorant_preserves_the_base_color() -> None:
     assert result == pytest.approx(base)
 
 
-def test_reference_dose_reproduces_its_calibration_color() -> None:
+def test_dye_specific_calibration_concentration_reproduces_its_color() -> None:
     calibration = (0.8, 0.2, 0.1)
-    colorant = CalibratedColorant(calibration, 2.0, 2.0)
+    colorant = CalibratedColorant(calibration, 2.0, 200.0)
 
     result = simulate_silicone_color(WHITE, 100.0, [colorant])
 
@@ -25,7 +25,7 @@ def test_reference_dose_reproduces_its_calibration_color() -> None:
 
 
 def test_doubling_base_volume_halves_the_optical_density() -> None:
-    colorant = CalibratedColorant((0.25, 0.64, 0.81), 1.0, 1.0)
+    colorant = CalibratedColorant((0.25, 0.64, 0.81), 1.0, 100.0)
 
     result = simulate_silicone_color(WHITE, 200.0, [colorant])
 
@@ -33,8 +33,8 @@ def test_doubling_base_volume_halves_the_optical_density() -> None:
 
 
 def test_multiple_colorants_are_independent_of_row_order() -> None:
-    red = CalibratedColorant((0.9, 0.3, 0.3), 1.0, 0.75)
-    blue = CalibratedColorant((0.3, 0.4, 0.9), 2.0, 1.25)
+    red = CalibratedColorant((0.9, 0.3, 0.3), 0.75, 60.0)
+    blue = CalibratedColorant((0.3, 0.4, 0.9), 2.0, 100.0)
 
     forward = simulate_silicone_color(WHITE, 80.0, [red, blue])
     reverse = simulate_silicone_color(WHITE, 80.0, [blue, red])
@@ -55,7 +55,7 @@ def test_disabled_and_zero_drop_rows_do_not_contribute() -> None:
 
 def test_calibration_cannot_make_a_channel_brighter_than_the_base() -> None:
     base = (0.8, 0.7, 0.6)
-    colorant = CalibratedColorant((0.9, 0.5, 0.3), 1.0, 1.0)
+    colorant = CalibratedColorant((0.9, 0.5, 0.3), 1.0, 100.0)
 
     result = simulate_silicone_color(base, 100.0, [colorant])
 
@@ -68,8 +68,8 @@ def test_non_positive_base_volume_is_rejected(volume: float) -> None:
         simulate_silicone_color(WHITE, volume, [])
 
 
-def test_non_positive_reference_drops_are_rejected_when_used() -> None:
+def test_non_positive_calibration_drops_are_rejected_when_used() -> None:
     colorant = CalibratedColorant((0.5, 0.5, 0.5), 0.0, 1.0)
 
-    with pytest.raises(ValueError, match="Reference"):
+    with pytest.raises(ValueError, match="Calibration"):
         simulate_silicone_color(WHITE, 100.0, [colorant])

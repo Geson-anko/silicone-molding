@@ -22,6 +22,7 @@
 - [モディファイア出力に golden を作らない](feedback_no_golden_for_modifier_output.md) — Blender 標準モディファイアの結果は不変量だけで検証する
 - [常時ライブ更新よりボタン起動](feedback_prefer_explicit_trigger.md) — 計測系は「押して計算 → Scene に保存 → draw は表示だけ」。テスト可能性が跳ね上がる
 - [Mixture CalculatorのUI](feedback_mixture_calculator_ui.md) — Nパネル横の広いポップオーバーで開き、Enabled以外の行選択チェックボックスは使わない
+- [混色シミュレータのUIと校正値](feedback_color_simulator_ui.md) — 結果はフラット表示し、1滴/mLは染料別に調整できる初期目安として扱う
 - [Surface Cut と loose-part 分離](feedback_surface_cut_and_separation.md) — 1本の統合モディファイアと、評価済みコピーを元と同じコレクションへフラットに出力する分離フロー
 
 ## specs
@@ -29,7 +30,7 @@
 - [Solidify 機能](specs/solidify.md) — 選択メッシュへの固定名 Solidify モディファイアの付与・更新と、bpy.ops 非依存の適用
 - [体積計測 / サイドバーのセクション分け](specs/volume_measurement.md) — 親パネル + サブパネル 2 つへの再編と、ボタンで選択メッシュの合計体積を計測し mL で表示・クリックでコピーする機能
 - [手入力式シリコーン配合計算表](specs/mixture_calculator.md) — 体積・密度・重量比からA/Bの体積と重量を算出し、行選択・小計・`.blend` 保存に対応
-- [シリコーン混色シミュレータ](specs/color_mixing_simulator.md) — 1点校正による混色、名前付きプロファイル、材質球プレビューと選択物への適用
+- [シリコーン混色シミュレータ](specs/color_mixing_simulator.md) — 染料別の滴/mL校正による混色、名前付きプロファイル、結果色表示と選択物への適用
 - [STL 出力機能](specs/stl_export.md) — 選択物のみ・モディファイア適用・1000 倍を固定し、オブジェクト名を既定名にする保存フロー
 - [Boolean モディファイア追加機能](specs/boolean_modifier.md) — アクティブメッシュへ指定した Operand・Operation・Solver の Boolean モディファイアを追加する
 

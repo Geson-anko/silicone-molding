@@ -14,7 +14,7 @@ class CalibratedColorant:
     """One colorant dose calibrated against the current silicone base."""
 
     calibration_color: RGB
-    reference_drops_per_100_ml: float
+    calibration_drops_per_ml: float
     drops: float
     enabled: bool = True
 
@@ -35,10 +35,10 @@ def simulate_silicone_color(
 ) -> RGB:
     """Return a scene-linear RGB estimate for a calibrated colorant mixture.
 
-    Each calibration color is the observed color at its reference dose
-    in the currently selected base. Optical-density contributions are
-    scaled by the actual drops per 100 mL, then added so the result is
-    independent of row order.
+    Each calibration color is the observed color at its dye-specific
+    calibration drops per mL in the currently selected base. Optical-
+    density contributions are scaled by the actual concentration, then
+    added so the result is independent of row order.
     """
     if base_volume_ml <= 0.0:
         raise ValueError("Base volume must be greater than zero")
@@ -49,13 +49,13 @@ def simulate_silicone_color(
     for colorant in colorants:
         if not colorant.enabled or colorant.drops <= 0.0:
             continue
-        if colorant.reference_drops_per_100_ml <= 0.0:
-            raise ValueError("Reference drops must be greater than zero")
+        if colorant.calibration_drops_per_ml <= 0.0:
+            raise ValueError("Calibration drops per mL must be greater than zero")
 
         calibration_absorbance = _absorbance(colorant.calibration_color)
-        concentration_factor = (
-            colorant.drops * 100.0 / base_volume_ml
-        ) / colorant.reference_drops_per_100_ml
+        concentration_factor = colorant.drops / (
+            base_volume_ml * colorant.calibration_drops_per_ml
+        )
         for channel in range(3):
             contribution = max(
                 calibration_absorbance[channel] - base_absorbance[channel],

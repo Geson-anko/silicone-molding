@@ -87,7 +87,7 @@ class TestColorants:
         colorant = profile.colorants[0]
         assert colorant.enabled
         assert colorant.colorant_name == "Colorant"
-        assert colorant.reference_drops_per_100_ml == pytest.approx(1.0)
+        assert colorant.calibration_drops_per_ml == pytest.approx(1.0)
         assert colorant.drops == pytest.approx(0.0)
         drops = colorant.bl_rna.properties["drops"]
         assert drops.type == "FLOAT"
@@ -97,6 +97,7 @@ class TestColorants:
         self, settings: bpy.types.PropertyGroup
     ) -> None:
         first = _add_profile(settings)
+        first.base_volume_ml = 1.0
         bpy.ops.silicone_molding.add_colorant()
         first_colorant = first.colorants[0]
         first_colorant.calibration_color = (0.25, 0.5, 0.75)
