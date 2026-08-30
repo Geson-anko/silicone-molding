@@ -72,10 +72,12 @@ def test_the_button_is_disabled_outside_object_mode(
     assert not SILMOLD_OT_separate_loose_parts.poll(bpy.context)
 
 
-def test_applied_parts_are_written_to_a_collection_and_the_source_is_hidden(
+def test_applied_parts_are_flat_in_source_collections_and_the_source_is_hidden(
     loose_object: bpy.types.Object,
 ) -> None:
     source_mesh = loose_object.data
+    source_collections = set(loose_object.users_collection)
+    collection_names = set(bpy.data.collections.keys())
     solidify = loose_object.modifiers.new("Hidden Solidify", "SOLIDIFY")
     solidify.thickness = 0.25
     solidify.show_viewport = False
@@ -90,9 +92,10 @@ def test_applied_parts_are_written_to_a_collection_and_the_source_is_hidden(
     assert not solidify.show_viewport
     assert loose_object.hide_get()
 
-    output = bpy.data.collections["LooseTriangles Parts"]
-    parts = list(output.objects)
+    assert set(bpy.data.collections.keys()) == collection_names
+    parts = list(bpy.context.selected_objects)
     assert len(parts) == 2
+    assert all(set(part.users_collection) == source_collections for part in parts)
     assert all(len(part.modifiers) == 0 for part in parts)
     assert all(len(part.data.vertices) == 6 for part in parts)
     assert all(len(part.data.polygons) == 5 for part in parts)

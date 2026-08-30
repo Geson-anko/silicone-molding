@@ -1,13 +1,11 @@
-"""Operator that bakes selected meshes into collections of loose parts."""
+"""Operator that bakes selected meshes into loose-part objects."""
 
-from typing import Final, cast, override
+from typing import cast, override
 
 import bpy
 
 from ..core import separate_loose_parts
 from .solidify import OperatorReturn
-
-_COLLECTION_SUFFIX: Final = " Parts"
 
 
 def _selected_meshes(context: bpy.types.Context) -> list[bpy.types.Object]:
@@ -22,7 +20,7 @@ class SILMOLD_OT_separate_loose_parts(bpy.types.Operator):
     bl_label = "Separate Loose Parts"
     bl_description = (
         "Apply all modifiers to copies of the selected meshes, separate their "
-        "loose parts into new collections, and hide the originals"
+        "loose parts beside the originals, and hide the originals"
     )
     bl_options = {"REGISTER", "UNDO"}
 
@@ -37,12 +35,11 @@ class SILMOLD_OT_separate_loose_parts(bpy.types.Operator):
         generated: list[bpy.types.Object] = []
         for source in objects:
             mesh = _mesh_with_all_modifiers(context, source)
-            output = bpy.data.collections.new(f"{source.name}{_COLLECTION_SUFFIX}")
-            context.scene.collection.children.link(output)
 
             baked = bpy.data.objects.new(source.name, mesh)
             baked.matrix_world = source.matrix_world.copy()
-            output.objects.link(baked)
+            for collection in source.users_collection:
+                collection.objects.link(baked)
             parts = separate_loose_parts(baked)
             generated.extend(parts)
 

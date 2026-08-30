@@ -375,6 +375,8 @@ def check_loose_parts_become_separate_objects() -> None:
     bpy.context.scene.collection.objects.link(source)
     source.select_set(True)
     bpy.context.view_layer.objects.active = source
+    source_collections = set(source.users_collection)
+    collection_names = set(bpy.data.collections.keys())
     solidify = source.modifiers.new("Hidden Solidify", "SOLIDIFY")
     solidify.thickness = 0.25
     solidify.show_viewport = False
@@ -388,10 +390,10 @@ def check_loose_parts_become_separate_objects() -> None:
     assert len(source.modifiers) == 1
     assert not solidify.show_viewport
 
-    output = bpy.data.collections.get("LooseParts Parts")
-    assert output is not None, "output collection was not created"
-    parts = list(output.objects)
+    assert set(bpy.data.collections.keys()) == collection_names
+    parts = list(bpy.context.selected_objects)
     assert len(parts) == 2, f"expected 2 parts, got {[obj.name for obj in parts]}"
+    assert all(set(obj.users_collection) == source_collections for obj in parts)
     assert all(len(obj.modifiers) == 0 for obj in parts)
     assert all(len(obj.data.vertices) == 6 for obj in parts)
     assert all(len(obj.data.polygons) == 5 for obj in parts)
