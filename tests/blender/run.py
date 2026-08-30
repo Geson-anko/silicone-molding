@@ -347,16 +347,37 @@ def check_surface_cut_is_one_integrated_modifier() -> None:
     assert modifier.node_group is not None
     interface = modifier.node_group.interface
     assert interface is not None
+    cutting_surface = next(
+        item for item in interface.items_tree if item.name == "Cutting Surface"
+    )
     thickness = next(item for item in interface.items_tree if item.name == "Thickness")
+    even_thickness = next(
+        item for item in interface.items_tree if item.name == "Even Thickness"
+    )
+    solver = next(item for item in interface.items_tree if item.name == "Solver")
+    assert cutting_surface.default_value == surface
     assert abs(thickness.default_value - 0.00025) <= 1e-9
     assert abs(thickness.min_value - 0.000001) <= 1e-12
-    boolean = next(
+    assert not even_thickness.default_value
+    assert solver.default_value == "Manifold"
+    booleans = [
         node
         for node in modifier.node_group.nodes
         if node.bl_idname == "GeometryNodeMeshBoolean"
-    )
-    assert boolean.operation == "DIFFERENCE"
-    assert boolean.solver == "MANIFOLD"
+    ]
+    assert len(booleans) == 2
+    assert all(node.operation == "DIFFERENCE" for node in booleans)
+    assert {node.solver for node in booleans} == {"MANIFOLD", "EXACT"}
+
+    properties = getattr(modifier, "properties", None)
+    if properties is None:
+        modifier[even_thickness.identifier] = True
+        modifier[solver.identifier] = 1
+    else:
+        getattr(properties.inputs, even_thickness.identifier).value = True
+        getattr(properties.inputs, solver.identifier).value = "Exact"
+    target.update_tag(refresh={"DATA"})
+    bpy.context.view_layer.update()
 
     evaluated = target.evaluated_get(bpy.context.evaluated_depsgraph_get())
     evaluated_mesh = bpy.data.meshes.new_from_object(evaluated)
