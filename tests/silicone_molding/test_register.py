@@ -276,6 +276,7 @@ class TestColorProfileSettings:
             "base_color",
             "transparency",
             "cloudiness",
+            "result_color",
             "colorants",
             "colorant_active_index",
             "preview_material",
@@ -283,6 +284,7 @@ class TestColorProfileSettings:
             assert name in profile.bl_rna.properties
         for name in (
             "enabled",
+            "is_opacifier",
             "colorant_name",
             "calibration_color",
             "calibration_drops_per_ml",

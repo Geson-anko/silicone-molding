@@ -119,6 +119,24 @@ def _update_colorant(
             return
 
 
+def _get_result_color(profile: bpy.types.PropertyGroup) -> tuple[float, float, float]:
+    """Calculate the result swatch without storing duplicate color data."""
+    from ..operators.color_simulator import (
+        ColorProfileValues,
+        calculate_profile_color,
+    )
+
+    return calculate_profile_color(cast(ColorProfileValues, profile))
+
+
+def _ignore_result_color_edit(
+    _profile: bpy.types.PropertyGroup,
+    _value: Sequence[float],
+) -> None:
+    """Keep the calculated swatch read-only while allowing full-color
+    drawing."""
+
+
 class SiliconeMoldingColorant(bpy.types.PropertyGroup):
     """One calibrated dye dose inside a named color profile."""
 
@@ -126,6 +144,16 @@ class SiliconeMoldingColorant(bpy.types.PropertyGroup):
         name="Enabled",
         description="Include this colorant in the simulated result",
         default=True,
+        update=_update_colorant,
+    )
+
+    is_opacifier: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="White Opacifier",
+        description=(
+            "Treat this as white opacifier; at Calibration Drops / mL the "
+            "result becomes fully opaque and milky"
+        ),
+        default=False,
         update=_update_colorant,
     )
 
@@ -200,8 +228,8 @@ class SiliconeMoldingColorProfile(bpy.types.PropertyGroup):
     )
 
     transparency: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
-        name="Transparency",
-        description="Amount of light transmitted through the silicone",
+        name="Base Transparency",
+        description="Original silicone: 1.0 is clear and 0.0 is opaque",
         default=1.0,
         min=0.0,
         max=1.0,
@@ -210,13 +238,25 @@ class SiliconeMoldingColorProfile(bpy.types.PropertyGroup):
     )
 
     cloudiness: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
-        name="Cloudiness",
-        description="Internal scattering that makes the silicone look milky",
+        name="Base Cloudiness",
+        description="Original silicone: 0.0 is clear and 1.0 is milky white",
         default=0.0,
         min=0.0,
         max=1.0,
         subtype="FACTOR",
         update=_update_color_profile,
+    )
+
+    result_color: FloatVectorProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Result Color",
+        description="Calculated mixed color; change the base or dyes to edit it",
+        subtype="COLOR",
+        size=3,
+        min=0.0,
+        max=1.0,
+        get=_get_result_color,
+        set=_ignore_result_color_edit,
+        options={"SKIP_SAVE"},
     )
 
     colorants: CollectionProperty(  # pyright: ignore[reportInvalidTypeForm]

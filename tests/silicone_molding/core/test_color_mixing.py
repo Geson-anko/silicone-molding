@@ -2,7 +2,14 @@
 
 import pytest
 
-from silicone_molding.core import CalibratedColorant, simulate_silicone_color
+from silicone_molding.core import (
+    CalibratedColorant,
+    format_hex_color,
+    format_linear_rgb,
+    linear_rgb_to_srgb8,
+    simulate_silicone_appearance,
+    simulate_silicone_color,
+)
 
 WHITE = (1.0, 1.0, 1.0)
 
@@ -73,3 +80,61 @@ def test_non_positive_calibration_drops_are_rejected_when_used() -> None:
 
     with pytest.raises(ValueError, match="Calibration"):
         simulate_silicone_color(WHITE, 100.0, [colorant])
+
+
+def test_white_opacifier_reaches_opaque_at_its_calibration_concentration() -> None:
+    white = CalibratedColorant(
+        WHITE,
+        1.0,
+        100.0,
+        is_opacifier=True,
+    )
+
+    result = simulate_silicone_appearance(
+        (1.0, 0.9, 0.7),
+        100.0,
+        0.8,
+        0.2,
+        [white],
+    )
+
+    assert result.color == pytest.approx((1.0, 0.9, 0.7))
+    assert result.transparency == pytest.approx(0.0)
+    assert result.cloudiness == pytest.approx(1.0)
+
+
+def test_white_opacifier_interpolates_below_its_calibration_concentration() -> None:
+    half_strength_white = CalibratedColorant(
+        WHITE,
+        1.0,
+        50.0,
+        is_opacifier=True,
+    )
+
+    result = simulate_silicone_appearance(
+        WHITE,
+        100.0,
+        0.8,
+        0.2,
+        [half_strength_white],
+    )
+
+    assert result.transparency == pytest.approx(0.4)
+    assert result.cloudiness == pytest.approx(0.6)
+
+
+def test_regular_dye_does_not_change_transparency_or_cloudiness() -> None:
+    dye = CalibratedColorant((0.5, 0.25, 0.125), 1.0, 100.0)
+
+    result = simulate_silicone_appearance(WHITE, 100.0, 0.7, 0.3, [dye])
+
+    assert result.transparency == pytest.approx(0.7)
+    assert result.cloudiness == pytest.approx(0.3)
+
+
+def test_scene_linear_color_formats_are_copy_ready_srgb_values() -> None:
+    color = (1.0, 0.0, 0.25)
+
+    assert linear_rgb_to_srgb8(color) == (255, 0, 137)
+    assert format_hex_color(color) == "#FF0089"
+    assert format_linear_rgb(color) == "1.0000, 0.0000, 0.2500"

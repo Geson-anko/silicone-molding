@@ -259,8 +259,13 @@ def check_mixture_settings_survive_save_and_reload() -> None:
     bpy.ops.silicone_molding.add_color_profile()
     opaque = settings.color_profiles[1]
     opaque.profile_name = "Opaque White"
-    opaque.transparency = 0.1
-    opaque.cloudiness = 1.0
+    opaque.transparency = 0.8
+    opaque.cloudiness = 0.2
+    bpy.ops.silicone_molding.add_colorant()
+    white = opaque.colorants[0]
+    white.colorant_name = "White"
+    white.is_opacifier = True
+    white.drops = 100.0
 
     body = settings.mixture_parts.add()
     body.enabled = True
@@ -317,8 +322,17 @@ def check_mixture_settings_survive_save_and_reload() -> None:
         assert loaded_amber.colorant_name == "Amber"
         assert abs(loaded_amber.calibration_drops_per_ml - 2.0) <= TOLERANCE
         assert abs(loaded_amber.drops - 0.5) <= TOLERANCE
-        assert abs(loaded_opaque.transparency - 0.1) <= TOLERANCE
-        assert abs(loaded_opaque.cloudiness - 1.0) <= TOLERANCE
+        assert abs(loaded_opaque.transparency - 0.8) <= TOLERANCE
+        assert abs(loaded_opaque.cloudiness - 0.2) <= TOLERANCE
+        assert len(loaded_opaque.colorants) == 1
+        loaded_white = loaded_opaque.colorants[0]
+        assert loaded_white.colorant_name == "White"
+        assert loaded_white.is_opacifier
+        shader = loaded_opaque.preview_material.node_tree.nodes[
+            "Silicone Molding Shader"
+        ]
+        assert abs(shader.inputs["Transmission Weight"].default_value) <= TOLERANCE
+        assert abs(shader.inputs["Subsurface Weight"].default_value - 1.0) <= TOLERANCE
         assert loaded_clear.preview_material != loaded_opaque.preview_material
         assert loaded.color_profile_active_index == 1
         assert loaded_clear.colorant_active_index == -1

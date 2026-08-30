@@ -10,7 +10,15 @@ import bpy
 if TYPE_CHECKING:
     from bpy.types import bpy_prop_array
 
-from ..core import MixtureBreakdown, calculate_mixture, format_grams, format_ml
+from ..core import (
+    MixtureBreakdown,
+    calculate_mixture,
+    format_grams,
+    format_hex_color,
+    format_linear_rgb,
+    format_ml,
+    linear_rgb_to_srgb8,
+)
 from ..operators import (
     SILMOLD_OT_add_boolean,
     SILMOLD_OT_add_color_profile,
@@ -36,6 +44,7 @@ from ..operators.color_simulator import (
     ColorantValues,
     ColorSimulatorSettings,
     active_color_profile,
+    calculate_profile_appearance,
 )
 
 #: Left column of the volume row. The unit lives in the label so that the
@@ -395,6 +404,7 @@ class SILMOLD_UL_colorants(bpy.types.UIList):
         colorant = cast(ColorantValues, item)
         row = layout.row(align=True)
         row.prop(colorant, "enabled", text="")
+        row.prop(colorant, "is_opacifier", text="")
         row.prop(colorant, "colorant_name", text="")
         row.prop(colorant, "calibration_color", text="")
         row.prop(colorant, "calibration_drops_per_ml", text="")
@@ -417,7 +427,7 @@ def draw_color_simulator(
         "color_profiles",
         scene_settings,
         "color_profile_active_index",
-        rows=3,
+        rows=1,
     )
     profile_controls = profile_row.column(align=True)
     profile_controls.operator(
@@ -437,7 +447,7 @@ def draw_color_simulator(
         return
 
     base = layout.box()
-    base.label(text="2. Set the Silicone Base")
+    base.label(text="2. Set the Silicone Base Color, Volume, and Appearance")
     volume = base.row(align=True)
     volume.prop(profile, "base_volume_ml")
     volume.operator(
@@ -445,24 +455,33 @@ def draw_color_simulator(
         text="Use Mixture Total",
         icon="IMPORT",
     )
-    base.prop(profile, "base_color")
-    appearance = base.row(align=True)
-    appearance.prop(profile, "transparency", slider=True)
-    appearance.prop(profile, "cloudiness", slider=True)
+    base.prop(profile, "base_color", text="")
+    base.prop(
+        profile,
+        "transparency",
+        text="Base Transparency (1 clear / 0 opaque)",
+        slider=True,
+    )
+    base.prop(
+        profile,
+        "cloudiness",
+        text="Base Cloudiness (0 clear / 1 milky white)",
+        slider=True,
+    )
 
     colorants = layout.box()
     colorants.label(text="3. Add Colorants and Enter the Actual Drops")
     colorants.label(
-        text="Calibration Color is measured at the dye-specific drops/mL below",
-        icon="INFO",
-    )
-    colorants.label(
-        text="1.0 drop/mL is a starting estimate; adjust it for each dye",
+        text=(
+            "Colored: set observed color and drops/mL per dye; White: enable "
+            "Opacifier (1 drop/mL = opaque)"
+        ),
         icon="INFO",
     )
     header = colorants.row(align=True)
     for text in (
         "On",
+        "White / Opaque",
         "Dye",
         "Calibration Color",
         "Calibration Drops / mL",
@@ -477,7 +496,7 @@ def draw_color_simulator(
         "colorants",
         cast(bpy.types.PropertyGroup, profile),
         "colorant_active_index",
-        rows=6,
+        rows=2,
     )
     colorant_controls = colorant_row.column(align=True)
     colorant_controls.operator(
@@ -492,19 +511,36 @@ def draw_color_simulator(
     )
 
     result = layout.box()
-    result.label(text="4. Check the Mixed Color")
-    if profile.preview_material is not None:
-        swatch = result.row()
-        swatch.enabled = False
-        swatch.scale_y = 1.6
-        swatch.prop(profile.preview_material, "diffuse_color", text="Result Color")
-    result.operator(
-        SILMOLD_OT_apply_color_material.bl_idname,
-        icon="MATERIAL",
+    result.label(text="4. Check the Mixed Color (click values to copy)")
+    swatch = result.row()
+    swatch.scale_y = 1.6
+    swatch.prop(profile, "result_color", text="Result Color")
+
+    calculated = calculate_profile_appearance(profile)
+    srgb = linear_rgb_to_srgb8(calculated.color)
+    color_values = (
+        ("Hex (sRGB)", format_hex_color(calculated.color)),
+        ("sRGB 8-bit", f"rgb({srgb[0]}, {srgb[1]}, {srgb[2]})"),
+        ("Linear RGB", format_linear_rgb(calculated.color)),
     )
-    result.label(
-        text="Transparency and cloudiness appear on the applied material",
-        icon="INFO",
+    value_row = result.row(align=True)
+    for label, value in color_values:
+        value_column = value_row.column(align=True)
+        value_column.label(text=label)
+        copy = value_column.operator(
+            SILMOLD_OT_copy_value.bl_idname,
+            text=value,
+            icon="COPYDOWN",
+        )
+        copy.value = value
+
+    final_appearance = result.row(align=True)
+    final_appearance.label(text=f"Result Transparency: {calculated.transparency:.2f}")
+    final_appearance.label(text=f"Result Cloudiness: {calculated.cloudiness:.2f}")
+    final_appearance.operator(
+        SILMOLD_OT_apply_color_material.bl_idname,
+        text="Apply to Selected",
+        icon="MATERIAL",
     )
 
 

@@ -22,7 +22,7 @@
 - [モディファイア出力に golden を作らない](feedback_no_golden_for_modifier_output.md) — Blender 標準モディファイアの結果は不変量だけで検証する
 - [常時ライブ更新よりボタン起動](feedback_prefer_explicit_trigger.md) — 計測系は「押して計算 → Scene に保存 → draw は表示だけ」。テスト可能性が跳ね上がる
 - [Mixture CalculatorのUI](feedback_mixture_calculator_ui.md) — Nパネル横の広いポップオーバーで開き、Enabled以外の行選択チェックボックスは使わない
-- [混色シミュレータのUIと校正値](feedback_color_simulator_ui.md) — 結果はフラット表示し、1滴/mLは染料別に調整できる初期目安として扱う
+- [混色シミュレータのUIと校正値](feedback_color_simulator_ui.md) — 減光しない結果色とコピー可能なカラー値、白色不透明化剤、明示的なベース透明度・濁りを扱う
 - [Surface Cut と loose-part 分離](feedback_surface_cut_and_separation.md) — 1本の統合モディファイアと、評価済みコピーを元と同じコレクションへフラットに出力する分離フロー
 
 ## specs

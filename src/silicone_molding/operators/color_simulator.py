@@ -7,7 +7,12 @@ from typing import Protocol, cast, override
 
 import bpy
 
-from ..core import RGB, CalibratedColorant, simulate_silicone_color
+from ..core import (
+    RGB,
+    CalibratedColorant,
+    SimulatedSiliconeAppearance,
+    simulate_silicone_appearance,
+)
 from .solidify import OperatorReturn
 
 _MATERIAL_PREFIX = "Silicone Mix - "
@@ -18,6 +23,7 @@ class ColorantValues(Protocol):
     """RNA values needed to calculate one colorant contribution."""
 
     enabled: bool
+    is_opacifier: bool
     colorant_name: str
     calibration_color: Sequence[float]
     calibration_drops_per_ml: float
@@ -85,18 +91,28 @@ def active_color_profile(
 
 def calculate_profile_color(profile: ColorProfileValues) -> RGB:
     """Calculate the scene-linear preview color for one saved profile."""
+    return calculate_profile_appearance(profile).color
+
+
+def calculate_profile_appearance(
+    profile: ColorProfileValues,
+) -> SimulatedSiliconeAppearance:
+    """Calculate color and optical appearance for one saved profile."""
     colorants = (
         CalibratedColorant(
             calibration_color=cast(RGB, tuple(colorant.calibration_color[:3])),
             calibration_drops_per_ml=colorant.calibration_drops_per_ml,
             drops=colorant.drops,
             enabled=colorant.enabled,
+            is_opacifier=colorant.is_opacifier,
         )
         for colorant in profile.colorants
     )
-    return simulate_silicone_color(
+    return simulate_silicone_appearance(
         cast(RGB, tuple(profile.base_color[:3])),
         profile.base_volume_ml,
+        profile.transparency,
+        profile.cloudiness,
         colorants,
     )
 
@@ -119,16 +135,16 @@ def _configure_material(
         shader.name = _SHADER_NODE_NAME
         node_tree.links.new(shader.outputs["BSDF"], output.inputs["Surface"])
 
-    color = calculate_profile_color(profile)
-    rgba = (*color, 1.0)
+    appearance = calculate_profile_appearance(profile)
+    rgba = (*appearance.color, 1.0)
     material.diffuse_color = rgba  # pyright: ignore[reportAttributeAccessIssue]
     cast(_ValueSocket, shader.inputs["Base Color"]).default_value = rgba
     cast(
         _ValueSocket, shader.inputs["Transmission Weight"]
-    ).default_value = profile.transparency
+    ).default_value = appearance.transparency
     cast(
         _ValueSocket, shader.inputs["Subsurface Weight"]
-    ).default_value = profile.cloudiness
+    ).default_value = appearance.cloudiness
     cast(_ValueSocket, shader.inputs["IOR"]).default_value = 1.41
     cast(_ValueSocket, shader.inputs["Roughness"]).default_value = 0.2
     cast(_ValueSocket, shader.inputs["Alpha"]).default_value = 1.0
@@ -236,6 +252,7 @@ class SILMOLD_OT_add_colorant(bpy.types.Operator):
             return {"CANCELLED"}
         colorant = profile.colorants.add()
         colorant.enabled = True
+        colorant.is_opacifier = False
         colorant.colorant_name = "Colorant"
         colorant.calibration_color = (1.0, 1.0, 1.0)
         colorant.calibration_drops_per_ml = 1.0

@@ -6,7 +6,10 @@ import bpy
 import pytest
 
 import silicone_molding
-from silicone_molding.operators.color_simulator import _MATERIAL_PREFIX
+from silicone_molding.operators.color_simulator import (
+    _MATERIAL_PREFIX,
+    _SHADER_NODE_NAME,
+)
 
 
 @pytest.fixture(scope="module")
@@ -86,6 +89,7 @@ class TestColorants:
         assert result == {"FINISHED"}
         colorant = profile.colorants[0]
         assert colorant.enabled
+        assert not colorant.is_opacifier
         assert colorant.colorant_name == "Colorant"
         assert colorant.calibration_drops_per_ml == pytest.approx(1.0)
         assert colorant.drops == pytest.approx(0.0)
@@ -113,6 +117,24 @@ class TestColorants:
         assert tuple(second.preview_material.diffuse_color[:3]) == pytest.approx(
             second_before
         )
+
+    def test_white_opacifier_updates_material_appearance(
+        self, settings: bpy.types.PropertyGroup
+    ) -> None:
+        profile = _add_profile(settings)
+        profile.base_volume_ml = 1.0
+        profile.transparency = 0.8
+        profile.cloudiness = 0.2
+        bpy.ops.silicone_molding.add_colorant()
+        white = profile.colorants[0]
+        white.is_opacifier = True
+        white.drops = 1.0
+
+        shader = profile.preview_material.node_tree.nodes[_SHADER_NODE_NAME]
+
+        assert shader.inputs["Transmission Weight"].default_value == pytest.approx(0.0)
+        assert shader.inputs["Subsurface Weight"].default_value == pytest.approx(1.0)
+        assert tuple(profile.result_color) == pytest.approx(tuple(profile.base_color))
 
 
 class TestMixtureVolumeCopy:
