@@ -1,6 +1,7 @@
 """Mesh processing that does not depend on ``bpy.ops`` or an interactive
 context."""
 
+from .color_mixing import RGB, CalibratedColorant, simulate_silicone_color
 from .mixture import MixtureBreakdown, calculate_mixture
 from .separate_loose_parts import separate_loose_parts
 from .solidify import (
@@ -19,10 +20,12 @@ from .units import cubic_units_to_ml, format_grams, format_ml, mm_to_units
 from .volume import VolumeSummary, total_volume, world_volume
 
 __all__ = [
+    "CalibratedColorant",
     "MIN_THICKNESS_MM",
     "MIN_SURFACE_CUT_THICKNESS_MM",
     "MixtureBreakdown",
     "MODIFIER_NAME",
+    "RGB",
     "SURFACE_CUT_MODIFIER_NAME",
     "VolumeSummary",
     "apply_solidify",
@@ -35,6 +38,7 @@ __all__ = [
     "format_ml",
     "mm_to_units",
     "separate_loose_parts",
+    "simulate_silicone_color",
     "total_volume",
     "world_volume",
 ]

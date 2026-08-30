@@ -29,6 +29,7 @@
 - [Solidify 機能](specs/solidify.md) — 選択メッシュへの固定名 Solidify モディファイアの付与・更新と、bpy.ops 非依存の適用
 - [体積計測 / サイドバーのセクション分け](specs/volume_measurement.md) — 親パネル + サブパネル 2 つへの再編と、ボタンで選択メッシュの合計体積を計測し mL で表示・クリックでコピーする機能
 - [手入力式シリコーン配合計算表](specs/mixture_calculator.md) — 体積・密度・重量比からA/Bの体積と重量を算出し、行選択・小計・`.blend` 保存に対応
+- [シリコーン混色シミュレータ](specs/color_mixing_simulator.md) — 1点校正による混色、名前付きプロファイル、材質球プレビューと選択物への適用
 - [STL 出力機能](specs/stl_export.md) — 選択物のみ・モディファイア適用・1000 倍を固定し、オブジェクト名を既定名にする保存フロー
 - [Boolean モディファイア追加機能](specs/boolean_modifier.md) — アクティブメッシュへ指定した Operand・Operation・Solver の Boolean モディファイアを追加する
 

@@ -9,35 +9,49 @@ from bpy.app.handlers import persistent
 
 from .operators import (
     SILMOLD_OT_add_boolean,
+    SILMOLD_OT_add_color_profile,
+    SILMOLD_OT_add_colorant,
     SILMOLD_OT_add_mixture_part,
     SILMOLD_OT_add_surface_cut,
+    SILMOLD_OT_apply_color_material,
     SILMOLD_OT_apply_solidify,
+    SILMOLD_OT_copy_mixture_volume_to_coloring,
     SILMOLD_OT_copy_value,
     SILMOLD_OT_export_stl,
     SILMOLD_OT_inherit_shape,
     SILMOLD_OT_measure_volume,
     SILMOLD_OT_move_mixture_parts,
+    SILMOLD_OT_remove_color_profile,
+    SILMOLD_OT_remove_colorant,
     SILMOLD_OT_remove_mixture_parts,
     SILMOLD_OT_select_mixture_part,
     SILMOLD_OT_separate_loose_parts,
     SILMOLD_OT_solidify,
 )
 from .ui import (
+    SiliconeMoldingColorant,
+    SiliconeMoldingColorProfile,
     SiliconeMoldingMixturePart,
     SiliconeMoldingProperties,
+    SILMOLD_PT_color_simulator,
+    SILMOLD_PT_coloring,
     SILMOLD_PT_main,
     SILMOLD_PT_measurement,
     SILMOLD_PT_mixture_calculator,
     SILMOLD_PT_processing,
+    SILMOLD_UL_color_profiles,
+    SILMOLD_UL_colorants,
     SILMOLD_UL_mixture_parts,
 )
 
-# The order matters: SILMOLD_PT_main has to be registered before its two
-# sub-panels, because Blender resolves `bl_parent_id` at registration time and
+# The order matters: SILMOLD_PT_main has to be registered before its child
+# panels, because Blender resolves `bl_parent_id` at registration time and
 # raises RuntimeError when the parent is not there yet, which would fail
 # register() as a whole. The Scene pointer is attached after the loop, since
 # PointerProperty needs SiliconeMoldingProperties already registered.
 _CLASSES = (
+    SiliconeMoldingColorant,
+    SiliconeMoldingColorProfile,
     SiliconeMoldingMixturePart,
     SiliconeMoldingProperties,
     SILMOLD_OT_add_boolean,
@@ -53,10 +67,20 @@ _CLASSES = (
     SILMOLD_OT_remove_mixture_parts,
     SILMOLD_OT_move_mixture_parts,
     SILMOLD_OT_select_mixture_part,
+    SILMOLD_OT_add_color_profile,
+    SILMOLD_OT_remove_color_profile,
+    SILMOLD_OT_add_colorant,
+    SILMOLD_OT_remove_colorant,
+    SILMOLD_OT_copy_mixture_volume_to_coloring,
+    SILMOLD_OT_apply_color_material,
     SILMOLD_UL_mixture_parts,
+    SILMOLD_UL_color_profiles,
+    SILMOLD_UL_colorants,
     SILMOLD_PT_main,
     SILMOLD_PT_measurement,
     SILMOLD_PT_mixture_calculator,
+    SILMOLD_PT_color_simulator,
+    SILMOLD_PT_coloring,
     SILMOLD_PT_processing,
 )
 
@@ -68,13 +92,15 @@ _SCENE_ATTR = "silicone_molding"
 
 
 @persistent
-def _reset_mixture_selection_state(_unused: object) -> None:
-    """Clear transient mixture-list state after loading a file."""
+def _reset_transient_selection_state(_unused: object) -> None:
+    """Clear transient UI-list state after loading a file."""
     for scene in bpy.data.scenes:
         props = getattr(scene, _SCENE_ATTR, None)
         if props is not None:
             props.mixture_selection_anchor = -1
             props.mixture_active_index = -1
+            for profile in props.color_profiles:
+                profile.colorant_active_index = -1
 
 
 def register() -> None:
@@ -86,14 +112,14 @@ def register() -> None:
         _SCENE_ATTR,
         bpy.props.PointerProperty(type=SiliconeMoldingProperties),
     )
-    if _reset_mixture_selection_state not in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.append(_reset_mixture_selection_state)
+    if _reset_transient_selection_state not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_reset_transient_selection_state)
 
 
 def unregister() -> None:
     """Detach the scene-level settings and unregister every class."""
-    if _reset_mixture_selection_state in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.remove(_reset_mixture_selection_state)
+    if _reset_transient_selection_state in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_reset_transient_selection_state)
     delattr(bpy.types.Scene, _SCENE_ATTR)
     for cls in reversed(_CLASSES):
         bpy.utils.unregister_class(cls)

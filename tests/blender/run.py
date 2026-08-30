@@ -121,6 +121,12 @@ def check_addon_is_enabled() -> None:
         "remove_mixture_parts",
         "move_mixture_parts",
         "select_mixture_part",
+        "add_color_profile",
+        "remove_color_profile",
+        "add_colorant",
+        "remove_colorant",
+        "copy_mixture_volume_to_coloring",
+        "apply_color_material",
     ):
         assert (
             name in operators
@@ -149,6 +155,8 @@ def check_scene_properties() -> None:
         "mixture_parts",
         "mixture_selection_anchor",
         "mixture_active_index",
+        "color_profiles",
+        "color_profile_active_index",
     ):
         assert name in names, f"{name} is missing; scene settings have {sorted(names)}"
 
@@ -179,8 +187,50 @@ def check_mixture_part_operations() -> None:
     assert settings.mixture_selection_anchor == -1
 
 
+def check_named_color_profiles_update_and_apply_independently() -> None:
+    """Each recipe must own one live material that can be assigned to
+    meshes."""
+    settings = bpy.context.scene.silicone_molding
+    settings.color_profiles.clear()
+    settings.color_profile_active_index = -1
+
+    result = bpy.ops.silicone_molding.add_color_profile()
+    assert result == {"FINISHED"}, f"add_color_profile returned {result}"
+    warm = settings.color_profiles[0]
+    warm.profile_name = "Warm"
+    warm.base_color = (1.0, 0.8, 0.5)
+    result = bpy.ops.silicone_molding.add_colorant()
+    assert result == {"FINISHED"}, f"add_colorant returned {result}"
+    warm.colorants[0].calibration_color = (0.5, 0.25, 0.125)
+    warm.colorants[0].drops = 1.0
+
+    result = bpy.ops.silicone_molding.add_color_profile()
+    assert result == {"FINISHED"}, f"second add_color_profile returned {result}"
+    cool = settings.color_profiles[1]
+    cool.profile_name = "Cool"
+    cool.base_color = (0.5, 0.7, 1.0)
+    assert warm.preview_material != cool.preview_material
+    assert all(
+        abs(actual - expected) <= TOLERANCE
+        for actual, expected in zip(
+            warm.preview_material.diffuse_color[:3],
+            (0.5, 0.25, 0.125),
+            strict=True,
+        )
+    )
+
+    _deselect_everything()
+    bpy.ops.mesh.primitive_cube_add(size=1.0)
+    cube = bpy.context.active_object
+    assert cube is not None, "primitive_cube_add did not leave an active object"
+    result = bpy.ops.silicone_molding.apply_color_material()
+    assert result == {"FINISHED"}, f"apply_color_material returned {result}"
+    assert cube.active_material == cool.preview_material
+
+
 def check_mixture_settings_survive_save_and_reload() -> None:
-    """Every saved mixture input must round-trip through a .blend file."""
+    """Saved calculator and color-profile inputs must survive a .blend round-
+    trip."""
     settings = bpy.context.scene.silicone_molding
     settings.mixture_parts.clear()
     settings.mixture_use_shared_density = False
@@ -188,6 +238,28 @@ def check_mixture_settings_survive_save_and_reload() -> None:
     settings.mixture_density_b_g_per_ml = 1.0
     settings.mixture_ratio_a = 3.0
     settings.mixture_ratio_b = 1.0
+    settings.color_profiles.clear()
+    settings.color_profile_active_index = -1
+
+    bpy.ops.silicone_molding.add_color_profile()
+    clear = settings.color_profiles[0]
+    clear.profile_name = "Clear Yellow"
+    clear.base_volume_ml = 125.0
+    clear.base_color = (1.0, 0.9, 0.7)
+    clear.transparency = 0.9
+    clear.cloudiness = 0.1
+    bpy.ops.silicone_molding.add_colorant()
+    amber = clear.colorants[0]
+    amber.colorant_name = "Amber"
+    amber.calibration_color = (0.8, 0.4, 0.1)
+    amber.reference_drops_per_100_ml = 2.0
+    amber.drops = 0.5
+
+    bpy.ops.silicone_molding.add_color_profile()
+    opaque = settings.color_profiles[1]
+    opaque.profile_name = "Opaque White"
+    opaque.transparency = 0.1
+    opaque.cloudiness = 1.0
 
     body = settings.mixture_parts.add()
     body.enabled = True
@@ -222,6 +294,33 @@ def check_mixture_settings_survive_save_and_reload() -> None:
         assert [part.volume_ml for part in loaded.mixture_parts] == [60.0, 30.0]
         assert loaded.mixture_selection_anchor == -1
         assert loaded.mixture_active_index == -1
+        assert [profile.profile_name for profile in loaded.color_profiles] == [
+            "Clear Yellow",
+            "Opaque White",
+        ]
+        loaded_clear = loaded.color_profiles[0]
+        loaded_opaque = loaded.color_profiles[1]
+        assert abs(loaded_clear.base_volume_ml - 125.0) <= TOLERANCE
+        assert all(
+            abs(actual - expected) <= TOLERANCE
+            for actual, expected in zip(
+                loaded_clear.base_color,
+                (1.0, 0.9, 0.7),
+                strict=True,
+            )
+        )
+        assert abs(loaded_clear.transparency - 0.9) <= TOLERANCE
+        assert abs(loaded_clear.cloudiness - 0.1) <= TOLERANCE
+        assert len(loaded_clear.colorants) == 1
+        loaded_amber = loaded_clear.colorants[0]
+        assert loaded_amber.colorant_name == "Amber"
+        assert abs(loaded_amber.reference_drops_per_100_ml - 2.0) <= TOLERANCE
+        assert abs(loaded_amber.drops - 0.5) <= TOLERANCE
+        assert abs(loaded_opaque.transparency - 0.1) <= TOLERANCE
+        assert abs(loaded_opaque.cloudiness - 1.0) <= TOLERANCE
+        assert loaded_clear.preview_material != loaded_opaque.preview_material
+        assert loaded.color_profile_active_index == 1
+        assert loaded_clear.colorant_active_index == -1
 
 
 def check_solidify_then_apply_gives_a_double_walled_cube() -> None:
@@ -576,6 +675,7 @@ CHECKS = (
     check_addon_is_enabled,
     check_scene_properties,
     check_mixture_part_operations,
+    check_named_color_profiles_update_and_apply_independently,
     check_solidify_then_apply_gives_a_double_walled_cube,
     check_boolean_modifier_uses_the_requested_inputs,
     check_surface_cut_is_one_integrated_modifier,

@@ -13,18 +13,29 @@ if TYPE_CHECKING:
 from ..core import MixtureBreakdown, calculate_mixture, format_grams, format_ml
 from ..operators import (
     SILMOLD_OT_add_boolean,
+    SILMOLD_OT_add_color_profile,
+    SILMOLD_OT_add_colorant,
     SILMOLD_OT_add_mixture_part,
     SILMOLD_OT_add_surface_cut,
+    SILMOLD_OT_apply_color_material,
     SILMOLD_OT_apply_solidify,
+    SILMOLD_OT_copy_mixture_volume_to_coloring,
     SILMOLD_OT_copy_value,
     SILMOLD_OT_export_stl,
     SILMOLD_OT_inherit_shape,
     SILMOLD_OT_measure_volume,
     SILMOLD_OT_move_mixture_parts,
+    SILMOLD_OT_remove_color_profile,
+    SILMOLD_OT_remove_colorant,
     SILMOLD_OT_remove_mixture_parts,
     SILMOLD_OT_select_mixture_part,
     SILMOLD_OT_separate_loose_parts,
     SILMOLD_OT_solidify,
+)
+from ..operators.color_simulator import (
+    ColorantValues,
+    ColorSimulatorSettings,
+    active_color_profile,
 )
 
 #: Left column of the volume row. The unit lives in the label so that the
@@ -337,6 +348,150 @@ class SILMOLD_UL_mixture_parts(bpy.types.UIList):
         )
 
 
+class SILMOLD_UL_color_profiles(bpy.types.UIList):
+    """Compact selector for named color recipes."""
+
+    bl_idname = "SILMOLD_UL_color_profiles"
+
+    @override
+    def draw_item(
+        self,
+        context: bpy.types.Context,
+        layout: bpy.types.UILayout,
+        data: object | None,
+        item: object | None,
+        icon: int | None,
+        active_data: object,
+        active_property: str | None,
+        index: int | None,
+        flt_flag: int | None,
+    ) -> None:
+        del context, data, icon, active_data, active_property, index, flt_flag
+        if item is not None:
+            layout.prop(item, "profile_name", text="", emboss=False, icon="MATERIAL")
+
+
+class SILMOLD_UL_colorants(bpy.types.UIList):
+    """Editable calibrated colorants for the active profile."""
+
+    bl_idname = "SILMOLD_UL_colorants"
+
+    @override
+    def draw_item(
+        self,
+        context: bpy.types.Context,
+        layout: bpy.types.UILayout,
+        data: object | None,
+        item: object | None,
+        icon: int | None,
+        active_data: object,
+        active_property: str | None,
+        index: int | None,
+        flt_flag: int | None,
+    ) -> None:
+        del context, data, icon, active_data, active_property, index, flt_flag
+        if item is None:
+            return
+        colorant = cast(ColorantValues, item)
+        row = layout.row(align=True)
+        row.prop(colorant, "enabled", text="")
+        row.prop(colorant, "colorant_name", text="")
+        row.prop(colorant, "calibration_color", text="")
+        row.prop(colorant, "reference_drops_per_100_ml", text="")
+        row.prop(colorant, "drops", text="")
+
+
+def draw_color_simulator(
+    layout: bpy.types.UILayout,
+    scene_settings: bpy.types.PropertyGroup,
+) -> None:
+    """Draw named recipes, the active calibration table, and material
+    preview."""
+    settings = cast(ColorSimulatorSettings, scene_settings)
+    profiles = layout.box()
+    profiles.label(text="Color Profiles")
+    profile_row = profiles.row()
+    profile_row.template_list(
+        SILMOLD_UL_color_profiles.bl_idname,
+        "color_profiles",
+        scene_settings,
+        "color_profiles",
+        scene_settings,
+        "color_profile_active_index",
+        rows=3,
+    )
+    profile_controls = profile_row.column(align=True)
+    profile_controls.operator(
+        SILMOLD_OT_add_color_profile.bl_idname,
+        text="",
+        icon="ADD",
+    )
+    profile_controls.operator(
+        SILMOLD_OT_remove_color_profile.bl_idname,
+        text="",
+        icon="REMOVE",
+    )
+
+    profile = active_color_profile(settings)
+    if profile is None:
+        layout.label(text="Add a profile to begin", icon="INFO")
+        return
+
+    body = layout.split(factor=0.38)
+    preview = body.column()
+    if profile.preview_material is not None:
+        preview.template_preview(profile.preview_material, show_buttons=False)
+    preview.operator(
+        SILMOLD_OT_apply_color_material.bl_idname,
+        icon="MATERIAL",
+    )
+
+    inputs = body.column()
+    base = inputs.box()
+    base.label(text="Silicone Base")
+    volume = base.row(align=True)
+    volume.prop(profile, "base_volume_ml")
+    volume.operator(
+        SILMOLD_OT_copy_mixture_volume_to_coloring.bl_idname,
+        text="Use Mixture Total",
+        icon="IMPORT",
+    )
+    base.prop(profile, "base_color")
+    appearance = base.row(align=True)
+    appearance.prop(profile, "transparency", slider=True)
+    appearance.prop(profile, "cloudiness", slider=True)
+
+    colorants = inputs.box()
+    header = colorants.row(align=True)
+    for text in ("On", "Name", "Calibration", "Ref / 100 mL", "Drops"):
+        header.label(text=text)
+    colorant_row = colorants.row()
+    colorant_row.template_list(
+        SILMOLD_UL_colorants.bl_idname,
+        "colorants",
+        cast(bpy.types.PropertyGroup, profile),
+        "colorants",
+        cast(bpy.types.PropertyGroup, profile),
+        "colorant_active_index",
+        rows=6,
+    )
+    colorant_controls = colorant_row.column(align=True)
+    colorant_controls.operator(
+        SILMOLD_OT_add_colorant.bl_idname,
+        text="",
+        icon="ADD",
+    )
+    colorant_controls.operator(
+        SILMOLD_OT_remove_colorant.bl_idname,
+        text="",
+        icon="REMOVE",
+    )
+    inputs.label(
+        text="Calibration colors must use this base at the stated drops / 100 mL",
+        icon="INFO",
+    )
+
+
 class SILMOLD_PT_main(bpy.types.Panel):
     """Entry point for the add-on in the 3D View sidebar."""
 
@@ -370,6 +525,22 @@ class SILMOLD_PT_mixture_calculator(bpy.types.Panel):
         layout = self.layout
         assert layout is not None
         draw_mixture_calculator(layout, context.scene.silicone_molding)
+
+
+class SILMOLD_PT_color_simulator(bpy.types.Panel):
+    """Wide color simulator opened horizontally beside the sidebar."""
+
+    bl_label = "Color Mixing Simulator"
+    bl_idname = "SILMOLD_PT_color_simulator"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "HEADER"
+    bl_ui_units_x = 48
+
+    @override
+    def draw(self, context: bpy.types.Context) -> None:
+        layout = self.layout
+        assert layout is not None
+        draw_color_simulator(layout, context.scene.silicone_molding)
 
 
 class SILMOLD_PT_measurement(bpy.types.Panel):
@@ -418,6 +589,29 @@ class SILMOLD_PT_measurement(bpy.types.Panel):
         )
 
 
+class SILMOLD_PT_coloring(bpy.types.Panel):
+    """Entry point for named silicone color recipes."""
+
+    bl_label = "Coloring"
+    bl_idname = "SILMOLD_PT_coloring"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_parent_id = SILMOLD_PT_main.bl_idname
+    bl_order = 1
+
+    @override
+    def draw(self, context: bpy.types.Context) -> None:
+        del context
+        layout = self.layout
+        assert layout is not None
+        layout.popover(
+            panel=SILMOLD_PT_color_simulator.bl_idname,
+            text="Color Mixing Simulator",
+            icon="COLOR",
+            direction="HORIZONTAL",
+        )
+
+
 class SILMOLD_PT_processing(bpy.types.Panel):
     """Operations that reshape the selected meshes."""
 
@@ -426,7 +620,7 @@ class SILMOLD_PT_processing(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_parent_id = SILMOLD_PT_main.bl_idname
-    bl_order = 1
+    bl_order = 2
 
     @override
     def draw(self, context: bpy.types.Context) -> None:

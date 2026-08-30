@@ -9,6 +9,7 @@ from bpy.props import (
     CollectionProperty,
     EnumProperty,
     FloatProperty,
+    FloatVectorProperty,
     IntProperty,
     PointerProperty,
     StringProperty,
@@ -18,6 +19,8 @@ from ..core import MIN_SURFACE_CUT_THICKNESS_MM, MIN_THICKNESS_MM
 
 _MIN_DENSITY_G_PER_ML = 0.001
 _MIN_MIXTURE_RATIO = 0.001
+_MIN_COLORING_VOLUME_ML = 0.001
+_MIN_REFERENCE_DROPS = 0.001
 
 _BOOLEAN_SOLVERS = (
     (
@@ -85,6 +88,145 @@ class SiliconeMoldingMixturePart(bpy.types.PropertyGroup):
         default=0.0,
         min=0.0,
         precision=2,
+    )
+
+
+def _update_color_profile(
+    profile: bpy.types.PropertyGroup, _context: bpy.types.Context
+) -> None:
+    """Refresh a profile material after one of its saved inputs changes."""
+    from ..operators.color_simulator import (
+        ColorProfileValues,
+        update_color_preview_material,
+    )
+
+    update_color_preview_material(cast(ColorProfileValues, profile))
+
+
+def _update_colorant(
+    colorant: bpy.types.PropertyGroup, _context: bpy.types.Context
+) -> None:
+    """Find the colorant's owning profile and refresh only that material."""
+    from ..operators.color_simulator import update_color_preview_material
+
+    settings = getattr(colorant.id_data, "silicone_molding", None)
+    if settings is None:
+        return
+    pointer = colorant.as_pointer()
+    for profile in settings.color_profiles:
+        if any(item.as_pointer() == pointer for item in profile.colorants):
+            update_color_preview_material(profile)
+            return
+
+
+class SiliconeMoldingColorant(bpy.types.PropertyGroup):
+    """One calibrated dye dose inside a named color profile."""
+
+    enabled: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Enabled",
+        description="Include this colorant in the simulated result",
+        default=True,
+        update=_update_colorant,
+    )
+
+    colorant_name: StringProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Name",
+        default="Colorant",
+    )
+
+    calibration_color: FloatVectorProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Calibration Color",
+        description="Observed color at the reference dose in the current base",
+        subtype="COLOR",
+        size=3,
+        min=0.0,
+        max=1.0,
+        default=(1.0, 1.0, 1.0),
+        update=_update_colorant,
+    )
+
+    reference_drops_per_100_ml: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Reference Drops / 100 mL",
+        default=1.0,
+        min=_MIN_REFERENCE_DROPS,
+        precision=2,
+        step=100,
+        update=_update_colorant,
+    )
+
+    drops: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Drops",
+        description="Colorant amount; decimals support toothpick-sized doses",
+        default=0.0,
+        min=0.0,
+        precision=2,
+        step=100,
+        update=_update_colorant,
+    )
+
+
+class SiliconeMoldingColorProfile(bpy.types.PropertyGroup):
+    """A named silicone base, calibrated colorants, and preview material."""
+
+    profile_name: StringProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Profile Name",
+        default="Profile",
+        update=_update_color_profile,
+    )
+
+    base_volume_ml: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Base Volume (mL)",
+        default=100.0,
+        min=_MIN_COLORING_VOLUME_ML,
+        precision=2,
+        update=_update_color_profile,
+    )
+
+    base_color: FloatVectorProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Base Color",
+        description="Untinted silicone color, including any natural yellow cast",
+        subtype="COLOR",
+        size=3,
+        min=0.0,
+        max=1.0,
+        default=(1.0, 1.0, 1.0),
+        update=_update_color_profile,
+    )
+
+    transparency: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Transparency",
+        description="Amount of light transmitted through the silicone",
+        default=1.0,
+        min=0.0,
+        max=1.0,
+        subtype="FACTOR",
+        update=_update_color_profile,
+    )
+
+    cloudiness: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Cloudiness",
+        description="Internal scattering that makes the silicone look milky",
+        default=0.0,
+        min=0.0,
+        max=1.0,
+        subtype="FACTOR",
+        update=_update_color_profile,
+    )
+
+    colorants: CollectionProperty(  # pyright: ignore[reportInvalidTypeForm]
+        type=SiliconeMoldingColorant,
+    )
+
+    colorant_active_index: IntProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Active Colorant",
+        default=-1,
+        min=-1,
+        options={"HIDDEN", "SKIP_SAVE"},
+    )
+
+    preview_material: PointerProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Preview Material",
+        type=bpy.types.Material,
     )
 
 
@@ -226,4 +368,15 @@ class SiliconeMoldingProperties(bpy.types.PropertyGroup):
         min=-1,
         options={"HIDDEN", "SKIP_SAVE"},
         update=_select_active_mixture_part,
+    )
+
+    color_profiles: CollectionProperty(  # pyright: ignore[reportInvalidTypeForm]
+        type=SiliconeMoldingColorProfile,
+    )
+
+    color_profile_active_index: IntProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Active Color Profile",
+        default=-1,
+        min=-1,
+        options={"HIDDEN"},
     )
