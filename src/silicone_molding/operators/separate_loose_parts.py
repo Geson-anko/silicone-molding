@@ -1,11 +1,13 @@
-"""Operator that separates selected meshes by disconnected components."""
+"""Operator that bakes selected meshes into collections of loose parts."""
 
-from typing import override
+from typing import Final, cast, override
 
 import bpy
 
 from ..core import separate_loose_parts
 from .solidify import OperatorReturn
+
+_COLLECTION_SUFFIX: Final = " Parts"
 
 
 def _selected_meshes(context: bpy.types.Context) -> list[bpy.types.Object]:
@@ -14,11 +16,14 @@ def _selected_meshes(context: bpy.types.Context) -> list[bpy.types.Object]:
 
 
 class SILMOLD_OT_separate_loose_parts(bpy.types.Operator):
-    """Separate each selected mesh into one object per loose part."""
+    """Bake each selected mesh and output one object per loose part."""
 
     bl_idname = "silicone_molding.separate_loose_parts"
     bl_label = "Separate Loose Parts"
-    bl_description = "Separate selected meshes into one object per loose part"
+    bl_description = (
+        "Apply all modifiers to copies of the selected meshes, separate their "
+        "loose parts into new collections, and hide the originals"
+    )
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -29,15 +34,50 @@ class SILMOLD_OT_separate_loose_parts(bpy.types.Operator):
     @override
     def execute(self, context: bpy.types.Context) -> OperatorReturn:
         objects = _selected_meshes(context)
-        created = 0
-        for obj in objects:
-            parts = separate_loose_parts(obj)
-            created += len(parts) - 1
-            for part in parts:
-                part.select_set(True)
+        generated: list[bpy.types.Object] = []
+        for source in objects:
+            mesh = _mesh_with_all_modifiers(context, source)
+            output = bpy.data.collections.new(f"{source.name}{_COLLECTION_SUFFIX}")
+            context.scene.collection.children.link(output)
+
+            baked = bpy.data.objects.new(source.name, mesh)
+            baked.matrix_world = source.matrix_world.copy()
+            output.objects.link(baked)
+            parts = separate_loose_parts(baked)
+            generated.extend(parts)
+
+            source.select_set(False)
+            source.hide_set(True)
+
+        for part in generated:
+            part.select_set(True)
+        if generated:
+            context.view_layer.objects.active = generated[0]
 
         self.report(
             {"INFO"},
-            f"Separated {len(objects)} mesh(es), created {created} object(s)",
+            f"Baked {len(objects)} mesh(es) into {len(generated)} part(s)",
         )
         return {"FINISHED"}
+
+
+def _mesh_with_all_modifiers(
+    context: bpy.types.Context,
+    source: bpy.types.Object,
+) -> bpy.types.Mesh:
+    """Copy the evaluated shape while restoring the source stack exactly."""
+    visibility = [(modifier, modifier.show_viewport) for modifier in source.modifiers]
+    try:
+        for modifier, _was_visible in visibility:
+            modifier.show_viewport = True
+        context.view_layer.update()
+        evaluated = source.evaluated_get(context.evaluated_depsgraph_get())
+        mesh = bpy.data.meshes.new_from_object(evaluated)
+    finally:
+        for modifier, was_visible in visibility:
+            modifier.show_viewport = was_visible
+        context.view_layer.update()
+
+    source_mesh = cast(bpy.types.Mesh, source.data)
+    mesh.name = f"{source_mesh.name}.applied"
+    return mesh

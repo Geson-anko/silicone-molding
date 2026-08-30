@@ -5,7 +5,7 @@ from typing import Final, Literal, Protocol, cast, override
 import bpy
 from bpy.props import EnumProperty
 
-from ..core import ensure_solidify, mm_to_units
+from ..core import create_surface_cut, mm_to_units
 from .solidify import OperatorReturn
 
 _BooleanOperation = Literal["DIFFERENCE", "UNION", "INTERSECT"]
@@ -110,13 +110,13 @@ class SILMOLD_OT_add_boolean(bpy.types.Operator):
 
 
 class SILMOLD_OT_add_surface_cut(bpy.types.Operator):
-    """Turn the operand into a thin cutter and subtract it from the target."""
+    """Add one modifier that solidifies and subtracts a cutting surface."""
 
     bl_idname = "silicone_molding.add_surface_cut"
     bl_label = "Add Surface Cut"
     bl_description = (
-        "Solidify the operand into a thin cutting surface and add a Manifold "
-        "Difference modifier to the active mesh"
+        "Add one Surface Cut modifier that solidifies the operand and subtracts "
+        "it from the active mesh"
     )
     bl_options = {"REGISTER", "UNDO"}
 
@@ -140,13 +140,7 @@ class SILMOLD_OT_add_surface_cut(bpy.types.Operator):
             _SURFACE_CUT_THICKNESS_MM,
             context.scene.unit_settings.scale_length,
         )
-        ensure_solidify(
-            surface,
-            thickness,
-            flip=True,
-            even_thickness=False,
-        )
-        _add_boolean_modifier(target, surface, "DIFFERENCE", "MANIFOLD")
+        create_surface_cut(target, surface, thickness)
 
         self.report(
             {"INFO"},

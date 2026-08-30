@@ -66,11 +66,6 @@ STL_EXPORT_SCALE = 1000.0
 STL_FAR_OBJECT_X = 10.0
 STL_TOLERANCE = 1e-4
 
-# The surface-cut workflow gives its operand a one-micron thickness. With the
-# default metre-scale scene this is 1e-6 Blender units.
-SURFACE_CUT_THICKNESS = 1e-6
-SURFACE_CUT_TOLERANCE = 1e-9
-
 LOOSE_PART_VERTICES = [
     (0.0, 0.0, 0.0),
     (1.0, 0.0, 0.0),
@@ -313,8 +308,8 @@ def check_boolean_modifier_uses_the_requested_inputs() -> None:
     assert modifier.solver == "MANIFOLD"
 
 
-def check_surface_cut_configures_both_modifier_stacks() -> None:
-    """The installed workflow must prepare a thin Manifold Difference."""
+def check_surface_cut_is_one_integrated_modifier() -> None:
+    """One installed modifier must solidify and subtract the surface."""
     _deselect_everything()
     bpy.ops.mesh.primitive_cube_add(size=CUBE_SIZE)
     target = bpy.context.active_object
@@ -322,9 +317,14 @@ def check_surface_cut_configures_both_modifier_stacks() -> None:
 
     mesh = bpy.data.meshes.new("SurfaceCutMesh")
     mesh.from_pydata(
-        [(-2.0, -2.0, 0.0), (2.0, -2.0, 0.0), (2.0, 2.0, 0.0)],
+        [
+            (-2.0, -2.0, 0.0),
+            (2.0, -2.0, 0.0),
+            (2.0, 2.0, 0.0),
+            (-2.0, 2.0, 0.0),
+        ],
         [],
-        [(0, 1, 2)],
+        [(0, 1, 2, 3)],
     )
     surface = bpy.data.objects.new("SurfaceCut", mesh)
     bpy.context.scene.collection.objects.link(surface)
@@ -337,25 +337,30 @@ def check_surface_cut_configures_both_modifier_stacks() -> None:
     result = bpy.ops.silicone_molding.add_surface_cut()
 
     assert result == {"FINISHED"}, f"add_surface_cut returned {result}"
-    solidify = surface.modifiers.get(MODIFIER_NAME)
-    assert solidify is not None, "surface cut did not solidify its operand"
-    assert solidify.type == "SOLIDIFY"
-    assert abs(solidify.thickness - SURFACE_CUT_THICKNESS) <= SURFACE_CUT_TOLERANCE
-    assert solidify.offset == -1.0
-    assert not solidify.use_even_offset
-
-    boolean_modifiers = [
-        modifier for modifier in target.modifiers if modifier.type == "BOOLEAN"
-    ]
-    assert len(boolean_modifiers) == 1
-    boolean = boolean_modifiers[0]
-    assert boolean.object == surface
+    assert len(surface.modifiers) == 0
+    assert len(target.modifiers) == 1
+    modifier = target.modifiers[0]
+    assert modifier.name == "Surface Cut"
+    assert modifier.type == "NODES"
+    assert modifier.node_group is not None
+    boolean = next(
+        node
+        for node in modifier.node_group.nodes
+        if node.bl_idname == "GeometryNodeMeshBoolean"
+    )
     assert boolean.operation == "DIFFERENCE"
     assert boolean.solver == "MANIFOLD"
 
+    evaluated = target.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    evaluated_mesh = bpy.data.meshes.new_from_object(evaluated)
+    try:
+        assert _loose_part_count(evaluated_mesh) == 2
+    finally:
+        bpy.data.meshes.remove(evaluated_mesh)
+
 
 def check_loose_parts_become_separate_objects() -> None:
-    """The installed operator must create one selected object per part."""
+    """The installed operator must bake parts and preserve its source."""
     _deselect_everything()
     mesh = bpy.data.meshes.new("LoosePartsMesh")
     mesh.from_pydata(LOOSE_PART_VERTICES, [], LOOSE_PART_FACES)
@@ -363,15 +368,52 @@ def check_loose_parts_become_separate_objects() -> None:
     bpy.context.scene.collection.objects.link(source)
     source.select_set(True)
     bpy.context.view_layer.objects.active = source
+    solidify = source.modifiers.new("Hidden Solidify", "SOLIDIFY")
+    solidify.thickness = 0.25
+    solidify.show_viewport = False
 
     result = bpy.ops.silicone_molding.separate_loose_parts()
 
     assert result == {"FINISHED"}, f"separate_loose_parts returned {result}"
-    parts = [obj for obj in bpy.context.selected_objects if obj.type == "MESH"]
+    assert source.hide_get()
+    assert len(source.data.vertices) == 6
+    assert len(source.data.polygons) == 2
+    assert len(source.modifiers) == 1
+    assert not solidify.show_viewport
+
+    output = bpy.data.collections.get("LooseParts Parts")
+    assert output is not None, "output collection was not created"
+    parts = list(output.objects)
     assert len(parts) == 2, f"expected 2 parts, got {[obj.name for obj in parts]}"
-    assert bpy.context.active_object == source
-    assert all(len(obj.data.vertices) == 3 for obj in parts)
-    assert all(len(obj.data.polygons) == 1 for obj in parts)
+    assert all(len(obj.modifiers) == 0 for obj in parts)
+    assert all(len(obj.data.vertices) == 6 for obj in parts)
+    assert all(len(obj.data.polygons) == 5 for obj in parts)
+
+
+def _loose_part_count(mesh: bpy.types.Mesh) -> int:
+    """Count vertex-connected components without third-party imports."""
+    if len(mesh.vertices) == 0:
+        return 0
+    neighbors = [set() for _vertex in mesh.vertices]
+    for edge in mesh.edges:
+        first, second = edge.vertices
+        neighbors[first].add(second)
+        neighbors[second].add(first)
+
+    seen: set[int] = set()
+    parts = 0
+    for start in range(len(mesh.vertices)):
+        if start in seen:
+            continue
+        parts += 1
+        stack = [start]
+        while stack:
+            vertex = stack.pop()
+            if vertex in seen:
+                continue
+            seen.add(vertex)
+            stack.extend(neighbors[vertex] - seen)
+    return parts
 
 
 def _deselect_everything() -> None:
@@ -527,7 +569,7 @@ CHECKS = (
     check_mixture_part_operations,
     check_solidify_then_apply_gives_a_double_walled_cube,
     check_boolean_modifier_uses_the_requested_inputs,
-    check_surface_cut_configures_both_modifier_stacks,
+    check_surface_cut_is_one_integrated_modifier,
     check_loose_parts_become_separate_objects,
     check_measuring_a_closed_cube_stores_its_millilitres,
     check_an_open_mesh_clears_the_stored_measurement,

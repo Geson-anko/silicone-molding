@@ -5,13 +5,14 @@ The tests use Blender's real object and modifier data APIs. Nothing in
 """
 
 from collections.abc import Callable, Iterator
+from typing import cast
 
 import bpy
 import pytest
 from _helpers import make_cube_mesh
 
 import silicone_molding
-from silicone_molding.core import find_solidify
+from silicone_molding.core import SURFACE_CUT_MODIFIER_NAME
 from silicone_molding.operators import (
     SILMOLD_OT_add_boolean,
     SILMOLD_OT_add_surface_cut,
@@ -45,6 +46,7 @@ def add_object(registered: None) -> Iterator[AddObject]:
     bpy.context.view_layer.objects.active = None
 
     created: list[bpy.types.Object] = []
+    existing_node_groups = set(bpy.data.node_groups.keys())
 
     def add(
         name: str, data: bpy.types.ID | None = None, *, select: bool = True
@@ -64,6 +66,9 @@ def add_object(registered: None) -> Iterator[AddObject]:
     for obj in created:
         bpy.data.objects.remove(obj)
     bpy.data.batch_remove([data for data in datablocks.values() if data.users == 0])
+    for node_group in tuple(bpy.data.node_groups):
+        if node_group.name not in existing_node_groups:
+            bpy.data.node_groups.remove(node_group)
 
 
 def _set_inputs(
@@ -194,43 +199,62 @@ class TestAddingABooleanModifier:
 
 
 class TestAddingASurfaceCut:
-    def test_the_operand_becomes_a_one_micron_cutting_solid(
+    def test_the_target_gets_one_integrated_surface_cut_modifier(
         self, settings: bpy.types.PropertyGroup, add_object: AddObject
     ) -> None:
-        _target, surface = _set_inputs(settings, add_object)
+        target, surface = _set_inputs(settings, add_object)
+
+        result = bpy.ops.silicone_molding.add_surface_cut()
+
+        assert result == {"FINISHED"}
+        assert len(target.modifiers) == 1
+        modifier = target.modifiers[0]
+        assert modifier.name == SURFACE_CUT_MODIFIER_NAME
+        assert modifier.type == "NODES"
+        assert len(surface.modifiers) == 0
+
+    def test_one_micron_is_converted_to_the_scene_scale_inside_the_modifier(
+        self, settings: bpy.types.PropertyGroup, add_object: AddObject
+    ) -> None:
+        target, _surface = _set_inputs(settings, add_object)
         original_scale = bpy.context.scene.unit_settings.scale_length
         bpy.context.scene.unit_settings.scale_length = 0.001
-
         try:
             result = bpy.ops.silicone_molding.add_surface_cut()
         finally:
             bpy.context.scene.unit_settings.scale_length = original_scale
 
         assert result == {"FINISHED"}
-        modifier = find_solidify(surface)
-        assert modifier is not None
+        modifier = cast(bpy.types.NodesModifier, target.modifiers[0])
+        assert modifier.node_group is not None
+        extrude = next(
+            node
+            for node in modifier.node_group.nodes
+            if isinstance(node, bpy.types.GeometryNodeExtrudeMesh)
+        )
         # One micron is 0.001 BU when one BU represents one millimetre.
-        assert modifier.thickness == pytest.approx(0.001)
-        assert modifier.offset == -1.0
-        assert not modifier.use_even_offset
+        assert extrude.inputs["Offset Scale"].default_value == pytest.approx(-0.001)
 
-    def test_the_active_mesh_gets_a_manifold_difference(
+    def test_the_integrated_boolean_is_a_manifold_difference(
         self, settings: bpy.types.PropertyGroup, add_object: AddObject
     ) -> None:
-        target, surface = _set_inputs(settings, add_object)
+        target, _surface = _set_inputs(settings, add_object)
         settings.boolean_solver = "FLOAT"
 
         result = bpy.ops.silicone_molding.add_surface_cut()
 
         assert result == {"FINISHED"}
-        modifier = target.modifiers[0]
-        assert modifier.type == "BOOLEAN"
-        assert modifier.operand_type == "OBJECT"
-        assert modifier.object == surface
-        assert modifier.operation == "DIFFERENCE"
-        assert modifier.solver == "MANIFOLD"
+        modifier = cast(bpy.types.NodesModifier, target.modifiers[0])
+        assert modifier.node_group is not None
+        boolean = next(
+            node
+            for node in modifier.node_group.nodes
+            if isinstance(node, bpy.types.GeometryNodeMeshBoolean)
+        )
+        assert boolean.operation == "DIFFERENCE"
+        assert boolean.solver == "MANIFOLD"
 
-    def test_repeating_the_action_reuses_the_cutters_solidify_modifier(
+    def test_repeating_the_action_adds_another_integrated_modifier(
         self, settings: bpy.types.PropertyGroup, add_object: AddObject
     ) -> None:
         target, surface = _set_inputs(settings, add_object)
@@ -238,11 +262,8 @@ class TestAddingASurfaceCut:
         bpy.ops.silicone_molding.add_surface_cut()
         bpy.ops.silicone_molding.add_surface_cut()
 
-        assert len(surface.modifiers) == 1
-        assert [modifier.type for modifier in target.modifiers] == [
-            "BOOLEAN",
-            "BOOLEAN",
-        ]
+        assert len(surface.modifiers) == 0
+        assert [modifier.type for modifier in target.modifiers] == ["NODES", "NODES"]
 
 
 @pytest.mark.api_contract
