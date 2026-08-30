@@ -14,7 +14,7 @@ from bpy.props import (
     StringProperty,
 )
 
-from ..core import MIN_THICKNESS_MM
+from ..core import MIN_SURFACE_CUT_THICKNESS_MM, MIN_THICKNESS_MM
 
 _MIN_DENSITY_G_PER_ML = 0.001
 _MIN_MIXTURE_RATIO = 0.001
@@ -137,6 +137,16 @@ class SiliconeMoldingProperties(bpy.types.PropertyGroup):
         description="Method used to calculate the Boolean operation",
         items=_BOOLEAN_SOLVERS,
         default="EXACT",
+    )
+
+    # Deliberately no ``unit="LENGTH"``: this value is always entered in mm,
+    # then converted to Blender units when the modifier is created.
+    surface_cut_thickness_mm: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Thickness (mm)",
+        description="Surface Cut thickness in millimetres, regardless of scene units",
+        default=MIN_SURFACE_CUT_THICKNESS_MM,
+        min=MIN_SURFACE_CUT_THICKNESS_MM,
+        precision=3,
     )
 
     # Deliberately no ``unit="VOLUME"``, for the same reason as above: it

@@ -457,6 +457,7 @@ class SILMOLD_PT_processing(bpy.types.Panel):
                 text=label,
             )
             button.operation = operation
+        boolean.prop(props, "surface_cut_thickness_mm")
         boolean.operator(
             SILMOLD_OT_add_surface_cut.bl_idname,
             icon="MOD_SOLIDIFY",

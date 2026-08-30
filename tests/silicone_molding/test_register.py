@@ -160,6 +160,25 @@ class TestBooleanSettings:
         assert identifiers == {"MANIFOLD", "EXACT", "FLOAT"}
 
 
+class TestSurfaceCutSettings:
+    @pytest.mark.api_contract
+    def test_scene_settings_carry_the_surface_cut_thickness(
+        self, registered: None
+    ) -> None:
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert "surface_cut_thickness_mm" in properties
+
+    def test_thickness_defaults_to_its_one_micron_minimum(
+        self, registered: None
+    ) -> None:
+        thickness = bpy.context.scene.silicone_molding.bl_rna.properties[
+            "surface_cut_thickness_mm"
+        ]
+        assert thickness.default == pytest.approx(0.001)
+        assert thickness.hard_min == pytest.approx(0.001)
+        assert thickness.unit == "NONE"
+
+
 class TestMixtureSettings:
     @pytest.mark.api_contract
     def test_scene_settings_carry_the_mixture_properties(

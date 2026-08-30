@@ -4,7 +4,7 @@ from collections.abc import Iterator
 
 import bpy
 import pytest
-from _helpers import make_cube_mesh, mesh_invariants
+from _helpers import MeshInvariants, make_cube_mesh, mesh_invariants
 
 from silicone_molding.core import (
     SURFACE_CUT_MODIFIER_NAME,
@@ -12,6 +12,9 @@ from silicone_molding.core import (
 )
 
 THICKNESS = 1e-6
+EDITABLE_THICKNESS = 0.1
+UPDATED_THICKNESS = 0.2
+MINIMUM_THICKNESS = 0.001
 SURFACE_VERTICES = [
     (-2.0, -2.0, 0.0),
     (2.0, -2.0, 0.0),
@@ -37,24 +40,59 @@ def surface_cut_objects(
             bpy.data.node_groups.remove(node_group)
 
 
+def _evaluated_invariants(target: bpy.types.Object) -> MeshInvariants:
+    evaluated = target.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    result = bpy.data.meshes.new_from_object(evaluated)
+    try:
+        return mesh_invariants(result)
+    finally:
+        bpy.data.meshes.remove(result)
+
+
+def _thickness_socket(
+    modifier: bpy.types.NodesModifier,
+) -> bpy.types.NodeTreeInterfaceSocketFloatDistance:
+    assert modifier.node_group is not None
+    interface = modifier.node_group.interface
+    assert interface is not None
+    socket = next(item for item in interface.items_tree if item.name == "Thickness")
+    assert isinstance(socket, bpy.types.NodeTreeInterfaceSocketFloatDistance)
+    return socket
+
+
+def _set_modifier_thickness(
+    modifier: bpy.types.NodesModifier,
+    socket: bpy.types.NodeTreeInterfaceSocketFloatDistance,
+    value: float,
+) -> None:
+    properties = getattr(modifier, "properties", None)
+    if properties is None:
+        # Blender 5.1 stores Geometry Nodes inputs as modifier ID properties.
+        modifier[socket.identifier] = value
+    else:
+        # Blender 5.2 exposes the same input through structured RNA.
+        modifier_input = getattr(properties.inputs, socket.identifier)
+        modifier_input.value = value
+
+
 def test_one_modifier_performs_the_solidify_and_manifold_difference(
     surface_cut_objects: tuple[bpy.types.Object, bpy.types.Object],
 ) -> None:
     target, surface = surface_cut_objects
 
-    modifier = create_surface_cut(target, surface, THICKNESS)
+    modifier = create_surface_cut(
+        target,
+        surface,
+        THICKNESS,
+        minimum_thickness=THICKNESS,
+    )
 
     assert modifier.name == SURFACE_CUT_MODIFIER_NAME
     assert modifier.type == "NODES"
     assert len(target.modifiers) == 1
     assert len(surface.modifiers) == 0
 
-    evaluated = target.evaluated_get(bpy.context.evaluated_depsgraph_get())
-    result = bpy.data.meshes.new_from_object(evaluated)
-    try:
-        invariants = mesh_invariants(result)
-    finally:
-        bpy.data.meshes.remove(result)
+    invariants = _evaluated_invariants(target)
 
     assert invariants.vertex_count == 16
     assert invariants.face_count == 12
@@ -63,3 +101,27 @@ def test_one_modifier_performs_the_solidify_and_manifold_difference(
     assert invariants.volume == pytest.approx(8.0 - 4.0 * THICKNESS, abs=1e-6)
     assert invariants.bbox_min == pytest.approx((-1.0, -1.0, -1.0))
     assert invariants.bbox_max == pytest.approx((1.0, 1.0, 1.0))
+
+
+def test_modifier_thickness_is_exposed_and_live(
+    surface_cut_objects: tuple[bpy.types.Object, bpy.types.Object],
+) -> None:
+    target, surface = surface_cut_objects
+    modifier = create_surface_cut(
+        target,
+        surface,
+        EDITABLE_THICKNESS,
+        minimum_thickness=MINIMUM_THICKNESS,
+    )
+    socket = _thickness_socket(modifier)
+    assert socket.default_value == pytest.approx(EDITABLE_THICKNESS)
+    assert socket.min_value == pytest.approx(MINIMUM_THICKNESS)
+
+    before = _evaluated_invariants(target)
+    _set_modifier_thickness(modifier, socket, UPDATED_THICKNESS)
+    target.update_tag(refresh={"DATA"})
+    bpy.context.view_layer.update()
+    after = _evaluated_invariants(target)
+
+    assert before.volume == pytest.approx(8.0 - 4.0 * EDITABLE_THICKNESS)
+    assert after.volume == pytest.approx(8.0 - 4.0 * UPDATED_THICKNESS)

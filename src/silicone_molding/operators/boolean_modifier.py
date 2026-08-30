@@ -1,20 +1,15 @@
 """Operators that add Boolean modifiers to the active mesh."""
 
-from typing import Final, Literal, Protocol, cast, override
+from typing import Literal, Protocol, cast, override
 
 import bpy
 from bpy.props import EnumProperty
 
-from ..core import create_surface_cut, mm_to_units
+from ..core import MIN_SURFACE_CUT_THICKNESS_MM, create_surface_cut, mm_to_units
 from .solidify import OperatorReturn
 
 _BooleanOperation = Literal["DIFFERENCE", "UNION", "INTERSECT"]
 _BooleanSolver = Literal["MANIFOLD", "EXACT", "FLOAT"]
-
-# The working prototype used 1e-6 BU in a metre-scale scene. Expressing the
-# same physical thickness in millimetres keeps the cut stable when a scene
-# uses a different unit scale.
-_SURFACE_CUT_THICKNESS_MM: Final = 0.001
 
 _OPERATIONS = (
     ("DIFFERENCE", "Difference", "Subtract the operand from the active mesh"),
@@ -28,6 +23,7 @@ class _BooleanSettings(Protocol):
 
     boolean_operand: bpy.types.Object | None
     boolean_solver: _BooleanSolver
+    surface_cut_thickness_mm: float
 
 
 def _boolean_inputs(
@@ -136,11 +132,21 @@ class SILMOLD_OT_add_surface_cut(bpy.types.Operator):
             return {"CANCELLED"}
 
         target, surface = inputs
+        props = cast(_BooleanSettings, context.scene.silicone_molding)
         thickness = mm_to_units(
-            _SURFACE_CUT_THICKNESS_MM,
+            props.surface_cut_thickness_mm,
             context.scene.unit_settings.scale_length,
         )
-        create_surface_cut(target, surface, thickness)
+        minimum_thickness = mm_to_units(
+            MIN_SURFACE_CUT_THICKNESS_MM,
+            context.scene.unit_settings.scale_length,
+        )
+        create_surface_cut(
+            target,
+            surface,
+            thickness,
+            minimum_thickness=minimum_thickness,
+        )
 
         self.report(
             {"INFO"},

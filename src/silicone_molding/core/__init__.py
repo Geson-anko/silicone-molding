@@ -10,12 +10,17 @@ from .solidify import (
     ensure_solidify,
     find_solidify,
 )
-from .surface_cut import SURFACE_CUT_MODIFIER_NAME, create_surface_cut
+from .surface_cut import (
+    MIN_SURFACE_CUT_THICKNESS_MM,
+    SURFACE_CUT_MODIFIER_NAME,
+    create_surface_cut,
+)
 from .units import cubic_units_to_ml, format_grams, format_ml, mm_to_units
 from .volume import VolumeSummary, total_volume, world_volume
 
 __all__ = [
     "MIN_THICKNESS_MM",
+    "MIN_SURFACE_CUT_THICKNESS_MM",
     "MixtureBreakdown",
     "MODIFIER_NAME",
     "SURFACE_CUT_MODIFIER_NAME",

@@ -140,6 +140,7 @@ def check_scene_properties() -> None:
         "volume_measured",
         "boolean_operand",
         "boolean_solver",
+        "surface_cut_thickness_mm",
         "mixture_use_shared_density",
         "mixture_density_a_g_per_ml",
         "mixture_density_b_g_per_ml",
@@ -334,6 +335,7 @@ def check_surface_cut_is_one_integrated_modifier() -> None:
     settings = bpy.context.scene.silicone_molding
     settings.boolean_operand = surface
     settings.boolean_solver = "FLOAT"
+    settings.surface_cut_thickness_mm = 0.25
     result = bpy.ops.silicone_molding.add_surface_cut()
 
     assert result == {"FINISHED"}, f"add_surface_cut returned {result}"
@@ -343,6 +345,11 @@ def check_surface_cut_is_one_integrated_modifier() -> None:
     assert modifier.name == "Surface Cut"
     assert modifier.type == "NODES"
     assert modifier.node_group is not None
+    interface = modifier.node_group.interface
+    assert interface is not None
+    thickness = next(item for item in interface.items_tree if item.name == "Thickness")
+    assert abs(thickness.default_value - 0.00025) <= 1e-9
+    assert abs(thickness.min_value - 0.000001) <= 1e-12
     boolean = next(
         node
         for node in modifier.node_group.nodes

@@ -35,6 +35,7 @@ def settings(registered: None) -> Iterator[bpy.types.PropertyGroup]:
     props = bpy.context.scene.silicone_molding
     props.boolean_operand = None
     props.boolean_solver = "EXACT"
+    props.surface_cut_thickness_mm = 0.001
     yield props
     props.boolean_operand = None
 
@@ -213,10 +214,11 @@ class TestAddingASurfaceCut:
         assert modifier.type == "NODES"
         assert len(surface.modifiers) == 0
 
-    def test_one_micron_is_converted_to_the_scene_scale_inside_the_modifier(
+    def test_configured_thickness_and_minimum_reach_the_modifier_in_scene_units(
         self, settings: bpy.types.PropertyGroup, add_object: AddObject
     ) -> None:
         target, _surface = _set_inputs(settings, add_object)
+        settings.surface_cut_thickness_mm = 0.25
         original_scale = bpy.context.scene.unit_settings.scale_length
         bpy.context.scene.unit_settings.scale_length = 0.001
         try:
@@ -227,13 +229,15 @@ class TestAddingASurfaceCut:
         assert result == {"FINISHED"}
         modifier = cast(bpy.types.NodesModifier, target.modifiers[0])
         assert modifier.node_group is not None
-        extrude = next(
-            node
-            for node in modifier.node_group.nodes
-            if isinstance(node, bpy.types.GeometryNodeExtrudeMesh)
+        interface = modifier.node_group.interface
+        assert interface is not None
+        thickness = next(
+            item for item in interface.items_tree if item.name == "Thickness"
         )
-        # One micron is 0.001 BU when one BU represents one millimetre.
-        assert extrude.inputs["Offset Scale"].default_value == pytest.approx(-0.001)
+        assert isinstance(thickness, bpy.types.NodeTreeInterfaceSocketFloatDistance)
+        # One BU represents one millimetre in this scene.
+        assert thickness.default_value == pytest.approx(0.25)
+        assert thickness.min_value == pytest.approx(0.001)
 
     def test_the_integrated_boolean_is_a_manifold_difference(
         self, settings: bpy.types.PropertyGroup, add_object: AddObject
