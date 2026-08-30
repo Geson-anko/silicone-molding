@@ -66,6 +66,16 @@ STL_EXPORT_SCALE = 1000.0
 STL_FAR_OBJECT_X = 10.0
 STL_TOLERANCE = 1e-4
 
+LOOSE_PART_VERTICES = [
+    (0.0, 0.0, 0.0),
+    (1.0, 0.0, 0.0),
+    (0.0, 1.0, 0.0),
+    (3.0, 0.0, 0.0),
+    (4.0, 0.0, 0.0),
+    (3.0, 1.0, 0.0),
+]
+LOOSE_PART_FACES = [(0, 1, 2), (3, 4, 5)]
+
 _HALF = MEASURED_CUBE_SIZE / 2.0
 # A cube with its top face left off: the four edges around the hole are
 # boundary edges, so this mesh has no defined volume.
@@ -104,6 +114,8 @@ def check_addon_is_enabled() -> None:
         "copy_value",
         "export_stl",
         "add_boolean",
+        "add_surface_cut",
+        "separate_loose_parts",
         "inherit_shape",
         "add_mixture_part",
         "remove_mixture_parts",
@@ -128,6 +140,7 @@ def check_scene_properties() -> None:
         "volume_measured",
         "boolean_operand",
         "boolean_solver",
+        "surface_cut_thickness_mm",
         "mixture_use_shared_density",
         "mixture_density_a_g_per_ml",
         "mixture_density_b_g_per_ml",
@@ -296,6 +309,122 @@ def check_boolean_modifier_uses_the_requested_inputs() -> None:
     assert modifier.solver == "MANIFOLD"
 
 
+def check_surface_cut_is_one_integrated_modifier() -> None:
+    """One installed modifier must solidify and subtract the surface."""
+    _deselect_everything()
+    bpy.ops.mesh.primitive_cube_add(size=CUBE_SIZE)
+    target = bpy.context.active_object
+    assert target is not None, "primitive_cube_add did not create the target"
+
+    mesh = bpy.data.meshes.new("SurfaceCutMesh")
+    mesh.from_pydata(
+        [
+            (-2.0, -2.0, 0.0),
+            (2.0, -2.0, 0.0),
+            (2.0, 2.0, 0.0),
+            (-2.0, 2.0, 0.0),
+        ],
+        [],
+        [(0, 1, 2, 3)],
+    )
+    surface = bpy.data.objects.new("SurfaceCut", mesh)
+    bpy.context.scene.collection.objects.link(surface)
+    target.select_set(True)
+    bpy.context.view_layer.objects.active = target
+
+    settings = bpy.context.scene.silicone_molding
+    settings.boolean_operand = surface
+    settings.boolean_solver = "FLOAT"
+    settings.surface_cut_thickness_mm = 0.25
+    result = bpy.ops.silicone_molding.add_surface_cut()
+
+    assert result == {"FINISHED"}, f"add_surface_cut returned {result}"
+    assert len(surface.modifiers) == 0
+    assert len(target.modifiers) == 1
+    modifier = target.modifiers[0]
+    assert modifier.name == "Surface Cut"
+    assert modifier.type == "NODES"
+    assert modifier.node_group is not None
+    interface = modifier.node_group.interface
+    assert interface is not None
+    thickness = next(item for item in interface.items_tree if item.name == "Thickness")
+    assert abs(thickness.default_value - 0.00025) <= 1e-9
+    assert abs(thickness.min_value - 0.000001) <= 1e-12
+    boolean = next(
+        node
+        for node in modifier.node_group.nodes
+        if node.bl_idname == "GeometryNodeMeshBoolean"
+    )
+    assert boolean.operation == "DIFFERENCE"
+    assert boolean.solver == "MANIFOLD"
+
+    evaluated = target.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    evaluated_mesh = bpy.data.meshes.new_from_object(evaluated)
+    try:
+        assert _loose_part_count(evaluated_mesh) == 2
+    finally:
+        bpy.data.meshes.remove(evaluated_mesh)
+
+
+def check_loose_parts_become_separate_objects() -> None:
+    """The installed operator must bake parts and preserve its source."""
+    _deselect_everything()
+    mesh = bpy.data.meshes.new("LoosePartsMesh")
+    mesh.from_pydata(LOOSE_PART_VERTICES, [], LOOSE_PART_FACES)
+    source = bpy.data.objects.new("LooseParts", mesh)
+    bpy.context.scene.collection.objects.link(source)
+    source.select_set(True)
+    bpy.context.view_layer.objects.active = source
+    source_collections = set(source.users_collection)
+    collection_names = set(bpy.data.collections.keys())
+    solidify = source.modifiers.new("Hidden Solidify", "SOLIDIFY")
+    solidify.thickness = 0.25
+    solidify.show_viewport = False
+
+    result = bpy.ops.silicone_molding.separate_loose_parts()
+
+    assert result == {"FINISHED"}, f"separate_loose_parts returned {result}"
+    assert source.hide_get()
+    assert len(source.data.vertices) == 6
+    assert len(source.data.polygons) == 2
+    assert len(source.modifiers) == 1
+    assert not solidify.show_viewport
+
+    assert set(bpy.data.collections.keys()) == collection_names
+    parts = list(bpy.context.selected_objects)
+    assert len(parts) == 2, f"expected 2 parts, got {[obj.name for obj in parts]}"
+    assert all(set(obj.users_collection) == source_collections for obj in parts)
+    assert all(len(obj.modifiers) == 0 for obj in parts)
+    assert all(len(obj.data.vertices) == 6 for obj in parts)
+    assert all(len(obj.data.polygons) == 5 for obj in parts)
+
+
+def _loose_part_count(mesh: bpy.types.Mesh) -> int:
+    """Count vertex-connected components without third-party imports."""
+    if len(mesh.vertices) == 0:
+        return 0
+    neighbors = [set() for _vertex in mesh.vertices]
+    for edge in mesh.edges:
+        first, second = edge.vertices
+        neighbors[first].add(second)
+        neighbors[second].add(first)
+
+    seen: set[int] = set()
+    parts = 0
+    for start in range(len(mesh.vertices)):
+        if start in seen:
+            continue
+        parts += 1
+        stack = [start]
+        while stack:
+            vertex = stack.pop()
+            if vertex in seen:
+                continue
+            seen.add(vertex)
+            stack.extend(neighbors[vertex] - seen)
+    return parts
+
+
 def _deselect_everything() -> None:
     """Clear the selection, which the startup file leaves on its cube."""
     for existing in bpy.context.scene.objects:
@@ -449,6 +578,8 @@ CHECKS = (
     check_mixture_part_operations,
     check_solidify_then_apply_gives_a_double_walled_cube,
     check_boolean_modifier_uses_the_requested_inputs,
+    check_surface_cut_is_one_integrated_modifier,
+    check_loose_parts_become_separate_objects,
     check_measuring_a_closed_cube_stores_its_millilitres,
     check_an_open_mesh_clears_the_stored_measurement,
     check_copying_a_value_finishes,

@@ -14,6 +14,7 @@ from ..core import MixtureBreakdown, calculate_mixture, format_grams, format_ml
 from ..operators import (
     SILMOLD_OT_add_boolean,
     SILMOLD_OT_add_mixture_part,
+    SILMOLD_OT_add_surface_cut,
     SILMOLD_OT_apply_solidify,
     SILMOLD_OT_copy_value,
     SILMOLD_OT_export_stl,
@@ -22,6 +23,7 @@ from ..operators import (
     SILMOLD_OT_move_mixture_parts,
     SILMOLD_OT_remove_mixture_parts,
     SILMOLD_OT_select_mixture_part,
+    SILMOLD_OT_separate_loose_parts,
     SILMOLD_OT_solidify,
 )
 
@@ -455,6 +457,15 @@ class SILMOLD_PT_processing(bpy.types.Panel):
                 text=label,
             )
             button.operation = operation
+        boolean.prop(props, "surface_cut_thickness_mm")
+        boolean.operator(
+            SILMOLD_OT_add_surface_cut.bl_idname,
+            icon="MOD_SOLIDIFY",
+        )
         layout.operator(SILMOLD_OT_inherit_shape.bl_idname, icon="MOD_BOOLEAN")
+        layout.operator(
+            SILMOLD_OT_separate_loose_parts.bl_idname,
+            icon="MESH_DATA",
+        )
         layout.separator()
         layout.operator(SILMOLD_OT_export_stl.bl_idname, icon="EXPORT")
