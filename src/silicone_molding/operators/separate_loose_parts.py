@@ -5,12 +5,7 @@ from typing import cast, override
 import bpy
 
 from ..core import separate_loose_parts
-from .solidify import OperatorReturn
-
-
-def _selected_meshes(context: bpy.types.Context) -> list[bpy.types.Object]:
-    """Return a stable snapshot of the selected mesh objects."""
-    return [obj for obj in (context.selected_objects or ()) if obj.type == "MESH"]
+from ._operator import OperatorReturn, selected_meshes
 
 
 class SILMOLD_OT_separate_loose_parts(bpy.types.Operator):
@@ -27,11 +22,11 @@ class SILMOLD_OT_separate_loose_parts(bpy.types.Operator):
     @classmethod
     @override
     def poll(cls, context: bpy.types.Context) -> bool:
-        return context.mode == "OBJECT" and len(_selected_meshes(context)) > 0
+        return context.mode == "OBJECT" and bool(selected_meshes(context))
 
     @override
     def execute(self, context: bpy.types.Context) -> OperatorReturn:
-        objects = _selected_meshes(context)
+        objects = selected_meshes(context)
         generated: list[bpy.types.Object] = []
         for source in objects:
             mesh = _mesh_with_all_modifiers(context, source)

@@ -22,4 +22,8 @@
 - 2 階層のテスト（PyPI `bpy` wheel 上の pytest / 実 Blender へインストールしての統合チェック）と golden mesh 比較の基盤
 - Windows / macOS / Linux での CI と、タグ push でのリリース自動化
 
+### Changed
+
+- 機能と Blender 公開 API を維持したまま内部構造を整理し、オペレータ共通基盤を集約するとともに、配合計算・混色シミュレータ・サイドバーを凝集性に沿って分割
+
 [unreleased]: https://github.com/Geson-anko/silicone-molding/commits/main

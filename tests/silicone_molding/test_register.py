@@ -253,6 +253,26 @@ class TestMixtureSettings:
         assert settings.mixture_ratio_a > 0.0
         assert settings.mixture_ratio_b > 0.0
 
+    @pytest.mark.api_contract
+    def test_saved_row_inputs_and_transient_selection_state_keep_their_storage_roles(
+        self, registered: None
+    ) -> None:
+        # Contract pin, not a behaviour test: table inputs belong in .blend
+        # files, while UI-list navigation state must reset after file load.
+        settings = bpy.context.scene.silicone_molding
+        settings.mixture_parts.clear()
+        part = settings.mixture_parts.add()
+
+        for name in ("enabled", "selected", "part_name", "volume_ml"):
+            assert not part.bl_rna.properties[name].is_skip_save
+
+        properties = settings.bl_rna.properties
+        assert not properties["mixture_parts"].is_skip_save
+        assert properties["mixture_selection_anchor"].is_skip_save
+        assert properties["mixture_active_index"].is_skip_save
+
+        settings.mixture_parts.clear()
+
 
 class TestColorProfileSettings:
     @pytest.mark.api_contract
@@ -310,5 +330,90 @@ class TestColorProfileSettings:
         assert color.subtype == "COLOR"
         assert not color.is_hidden
         assert hex_color.type == "STRING"
+
+        settings.color_profiles.clear()
+
+    @pytest.mark.api_contract
+    def test_profile_and_colorant_numeric_inputs_keep_their_rna_ranges(
+        self, registered: None
+    ) -> None:
+        # Contract pin, not a behaviour test: these RNA constraints protect
+        # saved recipes from invalid physical quantities and color channels.
+        settings = bpy.context.scene.silicone_molding
+        settings.color_profiles.clear()
+        profile = settings.color_profiles.add()
+        colorant = profile.colorants.add()
+
+        profile_properties = profile.bl_rna.properties
+        base_volume = profile_properties["base_volume_ml"]
+        transparency = profile_properties["transparency"]
+        assert base_volume.type == "FLOAT"
+        assert base_volume.default == pytest.approx(100.0)
+        assert base_volume.hard_min == pytest.approx(0.001)
+        assert transparency.type == "FLOAT"
+        assert transparency.default == pytest.approx(1.0)
+        assert transparency.hard_min == pytest.approx(0.0)
+        assert transparency.hard_max == pytest.approx(1.0)
+
+        colorant_properties = colorant.bl_rna.properties
+        calibration_color = colorant_properties["calibration_color"]
+        hue = colorant_properties["calibration_hue_degrees"]
+        lightness = colorant_properties["calibration_lightness_percent"]
+        concentration = colorant_properties["calibration_drops_per_ml"]
+        drops = colorant_properties["drops"]
+        assert calibration_color.type == "FLOAT"
+        assert calibration_color.array_length == 3
+        assert calibration_color.hard_min == pytest.approx(0.0)
+        assert calibration_color.hard_max == pytest.approx(1.0)
+        assert hue.hard_min == pytest.approx(0.0)
+        assert hue.hard_max == pytest.approx(360.0)
+        assert lightness.hard_min == pytest.approx(0.0)
+        assert lightness.hard_max == pytest.approx(100.0)
+        assert concentration.hard_min == pytest.approx(0.001)
+        assert drops.hard_min == pytest.approx(0.0)
+
+        settings.color_profiles.clear()
+
+    @pytest.mark.api_contract
+    def test_saved_color_inputs_and_derived_display_values_keep_their_storage_roles(
+        self, registered: None
+    ) -> None:
+        # Contract pin, not a behaviour test: editable recipes and their
+        # material survive .blend saves; derived swatches and list navigation
+        # are rebuilt instead of becoming a second source of truth.
+        settings = bpy.context.scene.silicone_molding
+        settings.color_profiles.clear()
+        profile = settings.color_profiles.add()
+        colorant = profile.colorants.add()
+
+        scene_properties = settings.bl_rna.properties
+        assert not scene_properties["color_profiles"].is_skip_save
+        assert not scene_properties["color_profile_active_index"].is_skip_save
+
+        profile_properties = profile.bl_rna.properties
+        for name in (
+            "profile_name",
+            "base_volume_ml",
+            "base_color",
+            "transparency",
+            "colorants",
+            "preview_material",
+        ):
+            assert not profile_properties[name].is_skip_save
+        assert profile_properties["result_color"].is_skip_save
+        assert profile_properties["colorant_active_index"].is_skip_save
+
+        colorant_properties = colorant.bl_rna.properties
+        for name in (
+            "enabled",
+            "colorant_name",
+            "calibration_color",
+            "calibration_hue_degrees",
+            "calibration_lightness_percent",
+            "calibration_drops_per_ml",
+            "drops",
+        ):
+            assert not colorant_properties[name].is_skip_save
+        assert colorant_properties["calibration_hex"].is_skip_save
 
         settings.color_profiles.clear()

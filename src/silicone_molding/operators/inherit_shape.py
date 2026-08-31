@@ -4,7 +4,7 @@ from typing import Final, override
 
 import bpy
 
-from .solidify import OperatorReturn
+from ._operator import OperatorReturn
 
 _OBJECT_SUFFIX: Final = ".inherit"
 _MODIFIER_NAME: Final = "Inherit Shape"

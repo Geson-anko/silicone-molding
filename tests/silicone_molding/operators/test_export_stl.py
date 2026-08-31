@@ -125,6 +125,21 @@ class TestWhenTheExportButtonIsClickable:
 
 
 class TestExportStlOperator:
+    def test_selected_non_mesh_objects_are_ignored_during_export(
+        self, add_object: AddObject, tmp_path: Path
+    ) -> None:
+        add_object("Mold", make_cube_mesh(2.0, "MoldMesh"))
+        camera = add_object("Camera", bpy.data.cameras.new("CameraData"))
+        bpy.context.view_layer.objects.active = camera
+
+        requested_path = tmp_path / "MoldWithCameraSelected"
+        result = bpy.ops.silicone_molding.export_stl(filepath=str(requested_path))
+
+        output_path = requested_path.with_suffix(".stl")
+        assert result == {"FINISHED"}
+        assert output_path.is_file()
+        assert _read_binary_stl_vertices(output_path)
+
     def test_the_default_filename_comes_from_the_active_object(
         self, add_object: AddObject
     ) -> None:

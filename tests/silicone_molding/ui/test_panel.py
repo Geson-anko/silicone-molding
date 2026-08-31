@@ -81,9 +81,10 @@ class TestTheSubPanelsAreOpenAndAlwaysVisible:
 
 class TestColorSimulatorLists:
     def test_the_simulator_is_a_wide_view3d_popover(self) -> None:
+        assert SILMOLD_PT_color_simulator.bl_label == "Color Mixing Simulator"
         assert SILMOLD_PT_color_simulator.bl_space_type == "VIEW_3D"
         assert SILMOLD_PT_color_simulator.bl_region_type == "HEADER"
-        assert SILMOLD_PT_color_simulator.bl_ui_units_x >= 40
+        assert SILMOLD_PT_color_simulator.bl_ui_units_x == 48
 
     def test_profiles_and_colorants_use_native_ui_lists(self) -> None:
         assert SILMOLD_UL_color_profiles.bl_idname == "SILMOLD_UL_color_profiles"
@@ -92,9 +93,10 @@ class TestColorSimulatorLists:
 
 class TestMixtureCalculatorPopover:
     def test_the_calculator_is_a_wide_view3d_popover(self) -> None:
+        assert SILMOLD_PT_mixture_calculator.bl_label == "Mixture Calculator"
         assert SILMOLD_PT_mixture_calculator.bl_space_type == "VIEW_3D"
         assert SILMOLD_PT_mixture_calculator.bl_region_type == "HEADER"
-        assert SILMOLD_PT_mixture_calculator.bl_ui_units_x >= 40
+        assert SILMOLD_PT_mixture_calculator.bl_ui_units_x == 48
 
     def test_the_mixture_rows_use_a_native_ui_list(self) -> None:
         assert SILMOLD_UL_mixture_parts.bl_idname == "SILMOLD_UL_mixture_parts"
@@ -114,6 +116,24 @@ class TestPublicSurface:
         # AC-60 / FR-1: unchanged from before the split into sub-panels.
         assert SILMOLD_PT_main.bl_idname == "SILMOLD_PT_main"
         assert SILMOLD_PT_main.bl_category == "Silicone Molding"
+
+    def test_the_main_panel_keeps_its_header_and_sidebar_location(self) -> None:
+        assert SILMOLD_PT_main.bl_label == "Silicone Molding"
+        assert SILMOLD_PT_main.bl_space_type == "VIEW_3D"
+        assert SILMOLD_PT_main.bl_region_type == "UI"
+
+    def test_the_sub_panels_keep_their_headers_and_sidebar_location(self) -> None:
+        assert SILMOLD_PT_measurement.bl_label == "Measurement"
+        assert SILMOLD_PT_measurement.bl_space_type == "VIEW_3D"
+        assert SILMOLD_PT_measurement.bl_region_type == "UI"
+
+        assert SILMOLD_PT_coloring.bl_label == "Coloring"
+        assert SILMOLD_PT_coloring.bl_space_type == "VIEW_3D"
+        assert SILMOLD_PT_coloring.bl_region_type == "UI"
+
+        assert SILMOLD_PT_processing.bl_label == "Processing"
+        assert SILMOLD_PT_processing.bl_space_type == "VIEW_3D"
+        assert SILMOLD_PT_processing.bl_region_type == "UI"
 
     def test_the_measurement_panel_keeps_its_idname(self) -> None:
         # AC-61

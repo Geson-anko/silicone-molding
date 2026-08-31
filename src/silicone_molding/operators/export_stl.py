@@ -6,21 +6,16 @@ from typing import Final, cast, override
 import bpy
 from bpy.props import BoolProperty, StringProperty
 
-from .solidify import OperatorReturn
+from ._operator import OperatorReturn, selected_meshes
 
 _STL_EXTENSION = ".stl"
 _EXPORT_SCALE = 1000.0
 _LAST_EXPORT_DIRECTORY_KEY: Final = "_silicone_molding_last_stl_export_directory"
 
 
-def _selected_meshes(context: bpy.types.Context) -> list[bpy.types.Object]:
-    """Return the selected mesh objects available in this context."""
-    return [obj for obj in (context.selected_objects or ()) if obj.type == "MESH"]
-
-
 def _default_filepath(context: bpy.types.Context) -> str:
     """Build the initial STL path from the previous folder and mesh name."""
-    meshes = _selected_meshes(context)
+    meshes = selected_meshes(context)
     active = context.active_object
     source = active if active in meshes else meshes[0]
     filename = f"{source.name}{_STL_EXTENSION}"
@@ -59,7 +54,7 @@ class SILMOLD_OT_export_stl(bpy.types.Operator):
     @classmethod
     @override
     def poll(cls, context: bpy.types.Context) -> bool:
-        return context.mode == "OBJECT" and len(_selected_meshes(context)) > 0
+        return context.mode == "OBJECT" and bool(selected_meshes(context))
 
     @override
     def invoke(

@@ -6,7 +6,7 @@ import bpy
 from bpy.props import EnumProperty
 
 from ..core import MIN_SURFACE_CUT_THICKNESS_MM, create_surface_cut, mm_to_units
-from .solidify import OperatorReturn
+from ._operator import OperatorReturn
 
 _BooleanOperation = Literal["DIFFERENCE", "UNION", "INTERSECT"]
 _BooleanSolver = Literal["MANIFOLD", "EXACT", "FLOAT"]

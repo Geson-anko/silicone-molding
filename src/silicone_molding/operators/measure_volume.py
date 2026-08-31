@@ -13,7 +13,7 @@ from typing import Final, override
 import bpy
 
 from ..core import cubic_units_to_ml, format_ml, total_volume
-from .solidify import OperatorReturn
+from ._operator import OperatorReturn, selected_meshes
 
 #: How many object names the error message may list before it falls back to a
 #: count. The status bar is a single line, so an unbounded list is unreadable.
@@ -37,12 +37,9 @@ class SILMOLD_OT_measure_volume(bpy.types.Operator):
     @classmethod
     @override
     def poll(cls, context: bpy.types.Context) -> bool:
-        # `Context.selected_objects` is typed optional because space types
-        # without an object selection do not provide it; that is the same as
-        # none selected. No mode check: measuring only reads geometry, and it
-        # returns the same value in edit mode as in object mode.
-        selected = context.selected_objects or ()
-        return any(obj.type == "MESH" for obj in selected)
+        # No mode check: measuring only reads geometry, and it returns the same
+        # value in edit mode as in object mode.
+        return bool(selected_meshes(context))
 
     @override
     def execute(self, context: bpy.types.Context) -> OperatorReturn:
