@@ -1,24 +1,11 @@
 """Operators that add, update, and bake the add-on's Solidify modifier."""
 
-from typing import Literal, override
+from typing import override
 
 import bpy
 
 from ..core import apply_solidify, ensure_solidify, find_solidify, mm_to_units
-
-#: Blender's ``OperatorReturnItems`` RNA enum, spelled out so the module
-#: stays importable at runtime (the stub-only alias is not).
-OperatorReturn = set[
-    Literal["RUNNING_MODAL", "CANCELLED", "FINISHED", "PASS_THROUGH", "INTERFACE"]
-]
-
-
-def _selected_meshes(context: bpy.types.Context) -> list[bpy.types.Object]:
-    """Return the selected mesh objects, silently skipping other types."""
-    # `Context.selected_objects` is typed optional because space types without
-    # an object selection do not provide it; that is the same as none selected.
-    selected = context.selected_objects or ()
-    return [obj for obj in selected if obj.type == "MESH"]
+from ._operator import OperatorReturn, selected_meshes
 
 
 class SILMOLD_OT_solidify(bpy.types.Operator):
@@ -31,7 +18,7 @@ class SILMOLD_OT_solidify(bpy.types.Operator):
     @classmethod
     @override
     def poll(cls, context: bpy.types.Context) -> bool:
-        return context.mode == "OBJECT" and len(_selected_meshes(context)) > 0
+        return context.mode == "OBJECT" and bool(selected_meshes(context))
 
     @override
     def execute(self, context: bpy.types.Context) -> OperatorReturn:
@@ -40,7 +27,7 @@ class SILMOLD_OT_solidify(bpy.types.Operator):
             props.solidify_thickness_mm,
             context.scene.unit_settings.scale_length,
         )
-        objects = _selected_meshes(context)
+        objects = selected_meshes(context)
         for obj in objects:
             ensure_solidify(
                 obj,
@@ -66,14 +53,14 @@ class SILMOLD_OT_apply_solidify(bpy.types.Operator):
     @override
     def poll(cls, context: bpy.types.Context) -> bool:
         return context.mode == "OBJECT" and any(
-            find_solidify(obj) is not None for obj in _selected_meshes(context)
+            find_solidify(obj) is not None for obj in selected_meshes(context)
         )
 
     @override
     def execute(self, context: bpy.types.Context) -> OperatorReturn:
         depsgraph = context.evaluated_depsgraph_get()
         applied = 0
-        for obj in _selected_meshes(context):
+        for obj in selected_meshes(context):
             try:
                 apply_solidify(obj, depsgraph)
             except ValueError as exc:

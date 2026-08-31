@@ -1,11 +1,14 @@
 """Operators that edit and select the silicone mixture table."""
 
-from typing import cast, override
+from typing import Literal, cast, override
 
 import bpy
 from bpy.props import EnumProperty, IntProperty
 
-from .solidify import OperatorReturn
+from ._operator import OperatorReturn
+
+_MoveDirection = Literal["UP", "DOWN"]
+_SelectionMode = Literal["REPLACE", "TOGGLE", "RANGE", "ADD_RANGE"]
 
 _SELECTION_MODES = (
     ("REPLACE", "Replace", "Select only this row"),
@@ -88,7 +91,10 @@ class SILMOLD_OT_move_mixture_parts(bpy.types.Operator):
     def execute(self, context: bpy.types.Context) -> OperatorReturn:
         props = context.scene.silicone_molding
         parts = props.mixture_parts
-        direction = cast(str, self.direction)  # pyright: ignore[reportUnknownMemberType]
+        direction = cast(
+            _MoveDirection,
+            self.direction,  # pyright: ignore[reportUnknownMemberType]
+        )
         moved = False
         if direction == "UP":
             for index in range(1, len(parts)):
@@ -148,7 +154,10 @@ class SILMOLD_OT_select_mixture_part(bpy.types.Operator):
         if index >= len(parts):
             return {"CANCELLED"}
 
-        mode = cast(str, self.mode)  # pyright: ignore[reportUnknownMemberType]
+        mode = cast(
+            _SelectionMode,
+            self.mode,  # pyright: ignore[reportUnknownMemberType]
+        )
         anchor = props.mixture_selection_anchor
         previous_selection = [part.selected for part in parts]
         props.mixture_active_index = index

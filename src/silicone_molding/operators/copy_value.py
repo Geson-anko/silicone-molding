@@ -5,7 +5,7 @@ from typing import cast, override
 import bpy
 from bpy.props import StringProperty
 
-from .solidify import OperatorReturn
+from ._operator import OperatorReturn
 
 
 class SILMOLD_OT_copy_value(bpy.types.Operator):
