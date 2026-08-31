@@ -404,6 +404,9 @@ class SILMOLD_UL_colorants(bpy.types.UIList):
         colorant = cast(ColorantValues, item)
         row = layout.row(align=True)
         row.prop(colorant, "enabled", text="")
+        swatch = row.row(align=True)
+        swatch.scale_x = 0.7
+        swatch.prop(colorant, "calibration_color", text="")
         row.prop(colorant, "colorant_name", text="")
         row.prop(colorant, "calibration_hue_degrees", text="")
         row.prop(colorant, "calibration_lightness_percent", text="")
@@ -465,7 +468,7 @@ def draw_color_simulator(
     colorants = layout.box()
     colorants.label(text="3. Add Colorants and Enter the Actual Drops")
     colorants.label(
-        text="Saturation 100%; Lightness 100% = White, 0% = Black",
+        text="Picker / Hex input is normalized to Saturation 100%",
         icon="INFO",
     )
     colorants.label(
@@ -475,6 +478,7 @@ def draw_color_simulator(
     header = colorants.row(align=True)
     for text in (
         "On",
+        "Color",
         "Dye",
         "Hue (degrees)",
         "Lightness (%)",
@@ -503,6 +507,29 @@ def draw_color_simulator(
         text="",
         icon="REMOVE",
     )
+
+    if 0 <= profile.colorant_active_index < len(profile.colorants):
+        selected = profile.colorants[profile.colorant_active_index]
+        editor = colorants.box()
+        editor.label(text=f"Edit Selected Dye Color: {selected.colorant_name}")
+        edit_row = editor.row()
+        picker = edit_row.column(align=True)
+        picker.template_color_picker(
+            selected,
+            "calibration_color",
+            value_slider=True,
+        )
+        values = edit_row.column(align=True)
+        preview = values.row()
+        preview.scale_y = 1.4
+        preview.prop(selected, "calibration_color", text="Color")
+        values.prop(selected, "calibration_hex", text="Hex (sRGB)")
+        values.prop(selected, "calibration_hue_degrees", text="Hue (degrees)")
+        values.prop(
+            selected,
+            "calibration_lightness_percent",
+            text="Lightness (%)",
+        )
 
     result = layout.box()
     result.label(text="4. Check the Mixed Color (click values to copy)")

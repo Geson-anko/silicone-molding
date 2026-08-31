@@ -25,6 +25,7 @@ class ColorantValues(Protocol):
     enabled: bool
     colorant_name: str
     calibration_color: Sequence[float]
+    calibration_hex: str
     calibration_hue_degrees: float
     calibration_lightness_percent: float
     calibration_drops_per_ml: float

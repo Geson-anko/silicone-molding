@@ -8,6 +8,7 @@ from silicone_molding.core import (
     format_linear_rgb,
     linear_rgb_to_hsl,
     linear_rgb_to_srgb8,
+    parse_hex_color,
     saturated_hsl_to_linear_rgb,
     simulate_silicone_appearance,
     simulate_silicone_color,
@@ -207,3 +208,16 @@ def test_scene_linear_color_formats_are_copy_ready_srgb_values() -> None:
     assert linear_rgb_to_srgb8(color) == (255, 0, 137)
     assert format_hex_color(color) == "#FF0089"
     assert format_linear_rgb(color) == "1.0000, 0.0000, 0.2500"
+
+
+@pytest.mark.parametrize("hex_color", ["#804000", "804000", "#ffffff"])
+def test_hex_color_input_round_trips_through_scene_linear_rgb(hex_color: str) -> None:
+    parsed = parse_hex_color(hex_color)
+
+    assert format_hex_color(parsed) == f"#{hex_color.removeprefix('#').upper()}"
+
+
+@pytest.mark.parametrize("invalid", ["", "#12345", "#GG0000", "#11223344"])
+def test_invalid_hex_color_input_is_rejected(invalid: str) -> None:
+    with pytest.raises(ValueError, match="RRGGBB"):
+        parse_hex_color(invalid)

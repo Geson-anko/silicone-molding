@@ -6,6 +6,7 @@ import bpy
 import pytest
 
 import silicone_molding
+from silicone_molding.core import format_hex_color, linear_rgb_to_hsl, parse_hex_color
 from silicone_molding.operators.color_simulator import (
     _MATERIAL_PREFIX,
     _SHADER_NODE_NAME,
@@ -97,6 +98,57 @@ class TestColorants:
         drops = colorant.bl_rna.properties["drops"]
         assert drops.type == "FLOAT"
         assert drops.step == 100
+
+    def test_picker_color_is_previewed_and_normalized_to_maximum_saturation(
+        self, settings: bpy.types.PropertyGroup
+    ) -> None:
+        profile = _add_profile(settings)
+        bpy.ops.silicone_molding.add_colorant()
+        colorant = profile.colorants[0]
+        picked = parse_hex_color("#804060")
+        _picked_hue, _picked_saturation, picked_lightness = linear_rgb_to_hsl(picked)
+
+        colorant.calibration_color = picked
+
+        hue, saturation, lightness = linear_rgb_to_hsl(
+            tuple(colorant.calibration_color)
+        )
+        assert hue == pytest.approx(colorant.calibration_hue_degrees)
+        assert saturation == pytest.approx(1.0)
+        assert lightness == pytest.approx(picked_lightness)
+        assert colorant.calibration_lightness_percent == pytest.approx(
+            picked_lightness * 100.0
+        )
+
+    def test_hex_input_updates_hsl_and_the_color_preview(
+        self, settings: bpy.types.PropertyGroup
+    ) -> None:
+        profile = _add_profile(settings)
+        bpy.ops.silicone_molding.add_colorant()
+        colorant = profile.colorants[0]
+
+        colorant.calibration_hex = "#804000"
+
+        assert colorant.calibration_hex == "#804000"
+        assert format_hex_color(tuple(colorant.calibration_color)) == "#804000"
+        assert colorant.calibration_hue_degrees == pytest.approx(30.0)
+        assert colorant.calibration_lightness_percent == pytest.approx(
+            25.098039,
+            abs=1e-6,
+        )
+
+    def test_invalid_hex_input_keeps_the_previous_color(
+        self, settings: bpy.types.PropertyGroup
+    ) -> None:
+        profile = _add_profile(settings)
+        bpy.ops.silicone_molding.add_colorant()
+        colorant = profile.colorants[0]
+        before = tuple(colorant.calibration_color)
+
+        colorant.calibration_hex = "not-a-color"
+
+        assert tuple(colorant.calibration_color) == pytest.approx(before)
+        assert colorant.calibration_hex == "#FF0000"
 
     def test_changing_drops_updates_only_the_owning_profile_material(
         self, settings: bpy.types.PropertyGroup

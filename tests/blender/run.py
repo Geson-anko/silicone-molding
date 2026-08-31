@@ -205,6 +205,9 @@ def check_named_color_profiles_update_and_apply_independently() -> None:
     assert result == {"FINISHED"}, f"add_colorant returned {result}"
     warm.colorants[0].calibration_hue_degrees = 30.0
     warm.colorants[0].calibration_lightness_percent = 25.0
+    warm.colorants[0].calibration_hex = "#804000"
+    assert warm.colorants[0].calibration_hex == "#804000"
+    assert abs(warm.colorants[0].calibration_hue_degrees - 30.0) <= TOLERANCE
     warm.colorants[0].drops = 1.0
 
     result = bpy.ops.silicone_molding.add_color_profile()
@@ -217,7 +220,7 @@ def check_named_color_profiles_update_and_apply_independently() -> None:
         abs(actual - expected) <= COLOR_TOLERANCE
         for actual, expected in zip(
             warm.preview_material.diffuse_color[:3],
-            (0.214041, 0.050876, 0.0),
+            (0.215861, 0.051269, 0.0),
             strict=True,
         )
     )

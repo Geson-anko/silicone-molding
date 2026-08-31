@@ -19,7 +19,9 @@ from ..core import (
     MIN_SURFACE_CUT_THICKNESS_MM,
     MIN_THICKNESS_MM,
     RGB,
+    format_hex_color,
     linear_rgb_to_hsl,
+    parse_hex_color,
     saturated_hsl_to_linear_rgb,
 )
 
@@ -29,6 +31,7 @@ _MIN_COLORING_VOLUME_ML = 0.001
 _MIN_CALIBRATION_DROPS_PER_ML = 0.001
 _CALIBRATION_HUE_KEY = "_calibration_hue_degrees"
 _CALIBRATION_LIGHTNESS_KEY = "_calibration_lightness_percent"
+_COLOR_SYNC_TOLERANCE = 1e-7
 
 _BOOLEAN_SOLVERS = (
     (
@@ -137,6 +140,28 @@ def _update_colorant(
             return
 
 
+def _update_calibration_color(
+    colorant: bpy.types.PropertyGroup,
+    context: bpy.types.Context,
+) -> None:
+    """Normalize picker input to saturated HSL and refresh its material."""
+    state = cast(_ColorantHSLState, colorant)
+    color = cast(RGB, tuple(state.calibration_color[:3]))
+    hue, saturation, lightness = linear_rgb_to_hsl(color)
+    if saturation <= _COLOR_SYNC_TOLERANCE:
+        hue = _stored_float(state, _CALIBRATION_HUE_KEY, hue)
+    normalized = saturated_hsl_to_linear_rgb(hue, lightness)
+    state[_CALIBRATION_HUE_KEY] = hue
+    state[_CALIBRATION_LIGHTNESS_KEY] = lightness * 100.0
+    if any(
+        abs(actual - expected) > _COLOR_SYNC_TOLERANCE
+        for actual, expected in zip(color, normalized, strict=True)
+    ):
+        state.calibration_color = normalized
+        return
+    _update_colorant(colorant, context)
+
+
 def _get_result_color(profile: bpy.types.PropertyGroup) -> tuple[float, float, float]:
     """Calculate the result swatch without storing duplicate color data."""
     from ..operators.color_simulator import (
@@ -220,6 +245,24 @@ def _set_calibration_lightness(
     state.calibration_color = saturated_hsl_to_linear_rgb(hue, lightness / 100.0)
 
 
+def _get_calibration_hex(colorant: bpy.types.PropertyGroup) -> str:
+    """Return the picker color as conventional sRGB ``#RRGGBB`` text."""
+    state = cast(_ColorantHSLState, colorant)
+    return format_hex_color(cast(RGB, tuple(state.calibration_color[:3])))
+
+
+def _set_calibration_hex(
+    colorant: bpy.types.PropertyGroup,
+    value: str,
+) -> None:
+    """Apply valid sRGB hex text; invalid edits keep the previous color."""
+    try:
+        color = parse_hex_color(value)
+    except ValueError:
+        return
+    cast(_ColorantHSLState, colorant).calibration_color = color
+
+
 class SiliconeMoldingColorant(bpy.types.PropertyGroup):
     """One calibrated dye dose inside a named color profile."""
 
@@ -248,15 +291,25 @@ class SiliconeMoldingColorant(bpy.types.PropertyGroup):
     calibration_color: FloatVectorProperty(  # pyright: ignore[reportInvalidTypeForm]
         name="Calibration Color",
         description=(
-            "Saved scene-linear calibration color generated from Hue and Lightness"
+            "Dye color preview and picker; selections are normalized to 100% "
+            "HSL saturation"
         ),
         subtype="COLOR",
         size=3,
         min=0.0,
         max=1.0,
         default=(1.0, 0.0, 0.0),
-        options={"HIDDEN"},
-        update=_update_colorant,
+        update=_update_calibration_color,
+    )
+
+    calibration_hex: StringProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Hex (sRGB)",
+        description=(
+            "Enter a #RRGGBB color; it is converted to the saturated dye color"
+        ),
+        get=_get_calibration_hex,
+        set=_set_calibration_hex,
+        options={"SKIP_SAVE"},
     )
 
     calibration_hue_degrees: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]

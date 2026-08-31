@@ -287,11 +287,28 @@ class TestColorProfileSettings:
             "is_opacifier",
             "colorant_name",
             "calibration_color",
+            "calibration_hex",
             "calibration_hue_degrees",
             "calibration_lightness_percent",
             "calibration_drops_per_ml",
             "drops",
         ):
             assert name in colorant.bl_rna.properties
+
+        settings.color_profiles.clear()
+
+    def test_colorants_expose_an_editable_color_picker_and_hex_input(
+        self, registered: None
+    ) -> None:
+        settings = bpy.context.scene.silicone_molding
+        settings.color_profiles.clear()
+        profile = settings.color_profiles.add()
+        colorant = profile.colorants.add()
+
+        color = colorant.bl_rna.properties["calibration_color"]
+        hex_color = colorant.bl_rna.properties["calibration_hex"]
+        assert color.subtype == "COLOR"
+        assert not color.is_hidden
+        assert hex_color.type == "STRING"
 
         settings.color_profiles.clear()
