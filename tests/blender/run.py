@@ -202,7 +202,8 @@ def check_named_color_profiles_update_and_apply_independently() -> None:
     warm.base_color = (1.0, 0.8, 0.5)
     result = bpy.ops.silicone_molding.add_colorant()
     assert result == {"FINISHED"}, f"add_colorant returned {result}"
-    warm.colorants[0].calibration_color = (0.5, 0.25, 0.125)
+    warm.colorants[0].calibration_hue_degrees = 30.0
+    warm.colorants[0].calibration_lightness_percent = 25.0
     warm.colorants[0].drops = 1.0
 
     result = bpy.ops.silicone_molding.add_color_profile()
@@ -215,7 +216,7 @@ def check_named_color_profiles_update_and_apply_independently() -> None:
         abs(actual - expected) <= TOLERANCE
         for actual, expected in zip(
             warm.preview_material.diffuse_color[:3],
-            (0.5, 0.25, 0.125),
+            (0.214041, 0.050876, 0.0),
             strict=True,
         )
     )
@@ -252,7 +253,8 @@ def check_mixture_settings_survive_save_and_reload() -> None:
     bpy.ops.silicone_molding.add_colorant()
     amber = clear.colorants[0]
     amber.colorant_name = "Amber"
-    amber.calibration_color = (0.8, 0.4, 0.1)
+    amber.calibration_hue_degrees = 30.0
+    amber.calibration_lightness_percent = 25.0
     amber.calibration_drops_per_ml = 2.0
     amber.drops = 0.5
 
@@ -264,12 +266,14 @@ def check_mixture_settings_survive_save_and_reload() -> None:
     bpy.ops.silicone_molding.add_colorant()
     blue = opaque.colorants[0]
     blue.colorant_name = "Blue"
-    blue.calibration_color = (0.2, 0.4, 0.8)
+    blue.calibration_hue_degrees = 240.0
+    blue.calibration_lightness_percent = 50.0
     blue.drops = 100.0
     bpy.ops.silicone_molding.add_colorant()
     white = opaque.colorants[1]
     white.colorant_name = "White"
-    white.is_opacifier = True
+    white.calibration_hue_degrees = 30.0
+    white.calibration_lightness_percent = 100.0
     white.drops = 50.0
 
     body = settings.mixture_parts.add()
@@ -325,6 +329,8 @@ def check_mixture_settings_survive_save_and_reload() -> None:
         assert len(loaded_clear.colorants) == 1
         loaded_amber = loaded_clear.colorants[0]
         assert loaded_amber.colorant_name == "Amber"
+        assert abs(loaded_amber.calibration_hue_degrees - 30.0) <= TOLERANCE
+        assert abs(loaded_amber.calibration_lightness_percent - 25.0) <= TOLERANCE
         assert abs(loaded_amber.calibration_drops_per_ml - 2.0) <= TOLERANCE
         assert abs(loaded_amber.drops - 0.5) <= TOLERANCE
         assert abs(loaded_opaque.transparency - 0.8) <= TOLERANCE
@@ -333,9 +339,11 @@ def check_mixture_settings_survive_save_and_reload() -> None:
         loaded_blue = loaded_opaque.colorants[0]
         loaded_white = loaded_opaque.colorants[1]
         assert loaded_blue.colorant_name == "Blue"
-        assert not loaded_blue.is_opacifier
+        assert abs(loaded_blue.calibration_hue_degrees - 240.0) <= TOLERANCE
+        assert abs(loaded_blue.calibration_lightness_percent - 50.0) <= TOLERANCE
         assert loaded_white.colorant_name == "White"
-        assert loaded_white.is_opacifier
+        assert abs(loaded_white.calibration_hue_degrees - 30.0) <= TOLERANCE
+        assert abs(loaded_white.calibration_lightness_percent - 100.0) <= TOLERANCE
         shader = loaded_opaque.preview_material.node_tree.nodes[
             "Silicone Molding Shader"
         ]
@@ -345,7 +353,7 @@ def check_mixture_settings_survive_save_and_reload() -> None:
             abs(actual - expected) <= TOLERANCE
             for actual, expected in zip(
                 loaded_opaque.preview_material.diffuse_color,
-                (0.6, 0.7, 0.9, 1.0),
+                (0.5, 0.5, 1.0, 1.0),
                 strict=True,
             )
         )

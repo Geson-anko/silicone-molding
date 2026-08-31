@@ -8,8 +8,12 @@
 
 ## 混色計算
 
-色はscene-linear RGBで扱う。ベース色と、現在のベースを使って作成した染料の
-1点校正色をチャンネルごとの吸光度 `A = -ln(clamp(color, 1e-6, 1))` へ変換する。
+染料色はHSLで彩度を常に100%へ固定し、色相（0〜360度）と明度（0〜100%）を
+入力する。明度は染料ごとに変えられ、低明度の橙系で茶色なども表現する。
+HSLをsRGBへ変換した後、scene-linear RGBへ変換して校正色とする。
+
+ベース色と、現在のベースを使って作成した染料の1点校正色をチャンネルごとの
+吸光度 `A = -ln(clamp(color, 1e-6, 1))` へ変換する。
 染料の寄与は次の倍率でベース吸光度へ加算し、最後に `exp(-A)` でRGBへ戻す。
 
 ```text
@@ -25,15 +29,15 @@ contribution = max(CalibrationAbsorbance - BaseAbsorbance, 0)
 する。したがって既定では、色にかかわらずシリコーン1mLあたり染料合計1滴程度で
 不透明になる。
 
-RGBだけでは通常染料と、他の色を薄める白色顔料を区別できないため、染料行には
-`White / Lighten` を持たせる。通常染料だけを上記の吸光度混色へ入れ、白色行は
-校正色を白の到達色として使う。白色濃度の比で、吸光混色後の色から白の校正色へ
-scene-linear RGB上で補間する。複数の白色行があれば濃度加重平均を到達色とする。
+明度100%の校正色は色相にかかわらず白になるため、白色染料として自動判定する。
+白だけは上記の吸光度混色から外し、白色濃度の比で吸光混色後の色から白へ
+scene-linear RGB上で補間する。明度0%の黒と、明度100%未満の全ての色は
+吸光度混色へ入り、ベースや他の染料を暗くする。
 
 ```text
 opacity = clamp(sum(concentration of all enabled dyes), 0, 1)
-white = clamp(sum(concentration of enabled white dyes), 0, 1)
-ResultColor = lerp(SubtractiveDyeColor, CalibratedWhiteColor, white)
+white = clamp(sum(concentration of enabled dyes with Lightness = 100%), 0, 1)
+ResultColor = lerp(SubtractiveDyeColor, White, white)
 ResultTransparency = BaseTransparency * (1 - opacity)
 ResultCloudiness = BaseCloudiness + (1 - BaseCloudiness) * white
 ```
@@ -47,9 +51,10 @@ ResultCloudiness = BaseCloudiness + (1 - BaseCloudiness) * white
 `Scene.silicone_molding` にプロファイルのリストと、最後に選択したプロファイルの
 アクティブ行番号を保存する。
 各プロファイルは名前、基準体積mL、ベース色、ベース透明度、ベース濁り、
-染料リスト、専用のマテリアルを持つ。染料行はEnabled、White / Lighten、名前、
-校正色、校正濃度（滴/mL）、実際の滴数を持つ。滴数はfloatで、小数を直接入力
-できる一方、スクロールでは1.0ずつ変化する。
+染料リスト、専用のマテリアルを持つ。染料行はEnabled、名前、Hue（度）、
+Lightness（%）、校正濃度（滴/mL）、実際の滴数を持つ。染料入力にBlender標準の
+カラーピッカーは使わない。滴数はfloatで、小数を直接入力できる一方、
+スクロールでは1.0ずつ変化する。
 
 サイドバーはMeasurementとProcessingの間にColoringを置く。ボタンから横幅の
 広いポップアップを開き、プロファイル、ベース、染料、結果色を番号順に編集・確認
@@ -65,8 +70,8 @@ Mixture Calculatorとの連携は、現在の有効行Totalを基準体積へコ
 
 ## 材質
 
-Principled BSDFのBase Colorへ計算色、Transmission Weightへ白色不透明化剤を
-反映した最終透明度、Subsurface Weightへ最終濁りを設定する。IORは1.41、
+Principled BSDFのBase Colorへ計算色、Transmission Weightへ全染料を反映した
+最終透明度、Subsurface Weightへ最終濁りを設定する。IORは1.41、
 Roughnessは0.2、Alphaは1.0固定とする。
 選択物への適用は、選択中の全メッシュのアクティブ材質枠を、アクティブ
 プロファイルの共有マテリアルで置換する。材質枠がなければ追加する。

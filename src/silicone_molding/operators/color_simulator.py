@@ -23,9 +23,10 @@ class ColorantValues(Protocol):
     """RNA values needed to calculate one colorant contribution."""
 
     enabled: bool
-    is_opacifier: bool
     colorant_name: str
     calibration_color: Sequence[float]
+    calibration_hue_degrees: float
+    calibration_lightness_percent: float
     calibration_drops_per_ml: float
     drops: float
 
@@ -104,7 +105,6 @@ def calculate_profile_appearance(
             calibration_drops_per_ml=colorant.calibration_drops_per_ml,
             drops=colorant.drops,
             enabled=colorant.enabled,
-            is_opacifier=colorant.is_opacifier,
         )
         for colorant in profile.colorants
     )
@@ -252,9 +252,9 @@ class SILMOLD_OT_add_colorant(bpy.types.Operator):
             return {"CANCELLED"}
         colorant = profile.colorants.add()
         colorant.enabled = True
-        colorant.is_opacifier = False
         colorant.colorant_name = "Colorant"
-        colorant.calibration_color = (1.0, 1.0, 1.0)
+        colorant.calibration_hue_degrees = 0.0
+        colorant.calibration_lightness_percent = 50.0
         colorant.calibration_drops_per_ml = 1.0
         colorant.drops = 0.0
         profile.colorant_active_index = len(profile.colorants) - 1

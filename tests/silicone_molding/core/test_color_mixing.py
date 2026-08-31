@@ -6,7 +6,9 @@ from silicone_molding.core import (
     CalibratedColorant,
     format_hex_color,
     format_linear_rgb,
+    linear_rgb_to_hsl,
     linear_rgb_to_srgb8,
+    saturated_hsl_to_linear_rgb,
     simulate_silicone_appearance,
     simulate_silicone_color,
 )
@@ -82,13 +84,8 @@ def test_non_positive_calibration_drops_are_rejected_when_used() -> None:
         simulate_silicone_color(WHITE, 100.0, [colorant])
 
 
-def test_white_reaches_its_color_and_opaque_appearance_at_calibration() -> None:
-    white = CalibratedColorant(
-        WHITE,
-        1.0,
-        100.0,
-        is_opacifier=True,
-    )
+def test_white_is_detected_from_its_color_and_reaches_opaque_at_calibration() -> None:
+    white = CalibratedColorant(WHITE, 1.0, 100.0)
 
     result = simulate_silicone_appearance(
         (1.0, 0.9, 0.7),
@@ -105,12 +102,7 @@ def test_white_reaches_its_color_and_opaque_appearance_at_calibration() -> None:
 
 def test_white_makes_another_dye_paler_below_its_calibration_concentration() -> None:
     blue = CalibratedColorant((0.2, 0.4, 0.8), 1.0, 100.0)
-    half_strength_white = CalibratedColorant(
-        WHITE,
-        1.0,
-        50.0,
-        is_opacifier=True,
-    )
+    half_strength_white = CalibratedColorant(WHITE, 1.0, 50.0)
 
     result = simulate_silicone_appearance(
         WHITE,
@@ -155,6 +147,57 @@ def test_half_strength_dye_halves_transparency_without_adding_white_cloudiness()
     assert result.color == pytest.approx((0.5, 0.8, 0.9))
     assert result.transparency == pytest.approx(0.4)
     assert result.cloudiness == pytest.approx(0.2)
+
+
+@pytest.mark.parametrize(
+    ("hue_degrees", "lightness", "expected"),
+    [
+        (0.0, 0.5, (1.0, 0.0, 0.0)),
+        (120.0, 0.5, (0.0, 1.0, 0.0)),
+        (240.0, 0.5, (0.0, 0.0, 1.0)),
+        (37.0, 1.0, WHITE),
+        (212.0, 0.0, (0.0, 0.0, 0.0)),
+    ],
+)
+def test_saturated_hsl_accepts_variable_lightness_but_always_maximum_saturation(
+    hue_degrees: float,
+    lightness: float,
+    expected: tuple[float, float, float],
+) -> None:
+    color = saturated_hsl_to_linear_rgb(hue_degrees, lightness)
+
+    assert color == pytest.approx(expected)
+    if 0.0 < lightness < 1.0:
+        _hue, saturation, actual_lightness = linear_rgb_to_hsl(color)
+        assert saturation == pytest.approx(1.0)
+        assert actual_lightness == pytest.approx(lightness)
+
+
+def test_low_lightness_orange_represents_brown_without_losing_saturation() -> None:
+    brown = saturated_hsl_to_linear_rgb(30.0, 0.25)
+
+    assert brown == pytest.approx((0.214041, 0.050876, 0.0), abs=1e-6)
+    hue, saturation, lightness = linear_rgb_to_hsl(brown)
+    assert hue == pytest.approx(30.0)
+    assert saturation == pytest.approx(1.0)
+    assert lightness == pytest.approx(0.25)
+
+
+def test_black_and_non_white_saturated_dyes_use_subtractive_darkening() -> None:
+    black = CalibratedColorant(saturated_hsl_to_linear_rgb(0.0, 0.0), 1.0, 100.0)
+    brown = CalibratedColorant(
+        saturated_hsl_to_linear_rgb(30.0, 0.25),
+        1.0,
+        100.0,
+    )
+
+    black_result = simulate_silicone_appearance(WHITE, 100.0, 0.8, 0.2, [black])
+    brown_result = simulate_silicone_appearance(WHITE, 100.0, 0.8, 0.2, [brown])
+
+    assert max(black_result.color) < 1e-5
+    assert brown_result.color == pytest.approx(brown.calibration_color, abs=2e-6)
+    assert black_result.cloudiness == pytest.approx(0.2)
+    assert brown_result.cloudiness == pytest.approx(0.2)
 
 
 def test_scene_linear_color_formats_are_copy_ready_srgb_values() -> None:

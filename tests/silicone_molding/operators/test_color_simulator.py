@@ -89,8 +89,10 @@ class TestColorants:
         assert result == {"FINISHED"}
         colorant = profile.colorants[0]
         assert colorant.enabled
-        assert not colorant.is_opacifier
         assert colorant.colorant_name == "Colorant"
+        assert colorant.calibration_hue_degrees == pytest.approx(0.0)
+        assert colorant.calibration_lightness_percent == pytest.approx(50.0)
+        assert tuple(colorant.calibration_color) == pytest.approx((1.0, 0.0, 0.0))
         assert colorant.calibration_drops_per_ml == pytest.approx(1.0)
         assert colorant.drops == pytest.approx(0.0)
         drops = colorant.bl_rna.properties["drops"]
@@ -104,7 +106,8 @@ class TestColorants:
         first.base_volume_ml = 1.0
         bpy.ops.silicone_molding.add_colorant()
         first_colorant = first.colorants[0]
-        first_colorant.calibration_color = (0.25, 0.5, 0.75)
+        first_colorant.calibration_hue_degrees = 240.0
+        first_colorant.calibration_lightness_percent = 50.0
 
         second = _add_profile(settings)
         second_before = tuple(second.preview_material.diffuse_color[:3])
@@ -112,7 +115,8 @@ class TestColorants:
         first_colorant.drops = 1.0
 
         assert tuple(first.preview_material.diffuse_color[:3]) == pytest.approx(
-            (0.25, 0.5, 0.75)
+            (0.0, 0.0, 1.0),
+            abs=2e-6,
         )
         assert tuple(second.preview_material.diffuse_color[:3]) == pytest.approx(
             second_before
@@ -127,24 +131,32 @@ class TestColorants:
         profile.cloudiness = 0.2
         bpy.ops.silicone_molding.add_colorant()
         blue = profile.colorants[0]
-        blue.calibration_color = (0.2, 0.4, 0.8)
+        blue.calibration_hue_degrees = 240.0
+        blue.calibration_lightness_percent = 50.0
         blue.drops = 1.0
 
         shader = profile.preview_material.node_tree.nodes[_SHADER_NODE_NAME]
 
-        assert tuple(profile.result_color) == pytest.approx((0.2, 0.4, 0.8))
+        assert tuple(profile.result_color) == pytest.approx(
+            (0.0, 0.0, 1.0),
+            abs=2e-6,
+        )
         assert shader.inputs["Transmission Weight"].default_value == pytest.approx(0.0)
 
         bpy.ops.silicone_molding.add_colorant()
         white = profile.colorants[1]
-        white.is_opacifier = True
+        white.calibration_hue_degrees = 30.0
+        white.calibration_lightness_percent = 100.0
         white.drops = 0.5
 
         shader = profile.preview_material.node_tree.nodes[_SHADER_NODE_NAME]
 
         assert shader.inputs["Transmission Weight"].default_value == pytest.approx(0.0)
         assert shader.inputs["Subsurface Weight"].default_value == pytest.approx(0.6)
-        assert tuple(profile.result_color) == pytest.approx((0.6, 0.7, 0.9))
+        assert tuple(profile.result_color) == pytest.approx(
+            (0.5, 0.5, 1.0),
+            abs=2e-6,
+        )
 
 
 class TestMixtureVolumeCopy:

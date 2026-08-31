@@ -1,6 +1,7 @@
 """Approximate subtractive mixing for calibrated silicone colorants."""
 
 from collections.abc import Iterable
+from colorsys import hls_to_rgb, rgb_to_hls
 from dataclasses import dataclass
 from math import exp, log
 
@@ -17,7 +18,6 @@ class CalibratedColorant:
     calibration_drops_per_ml: float
     drops: float
     enabled: bool = True
-    is_opacifier: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +53,11 @@ def _absorbance(color: RGB) -> RGB:
     )
 
 
+def _is_white(color: RGB) -> bool:
+    """Return whether a saturated-HSL calibration is the white endpoint."""
+    return all(_clamp_unit(channel) == 1.0 for channel in color)
+
+
 def simulate_silicone_color(
     base_color: RGB,
     base_volume_ml: float,
@@ -72,7 +77,9 @@ def simulate_silicone_color(
     total_absorbance = list(base_absorbance)
 
     for colorant in colorants:
-        if not colorant.enabled or colorant.is_opacifier or colorant.drops <= 0.0:
+        if not colorant.enabled or _is_white(colorant.calibration_color):
+            continue
+        if colorant.drops <= 0.0:
             continue
         calibration_absorbance = _absorbance(colorant.calibration_color)
         concentration_factor = _concentration_factor(colorant, base_volume_ml)
@@ -99,9 +106,10 @@ def simulate_silicone_appearance(
 ) -> SimulatedSiliconeAppearance:
     """Return color, transparency, and cloudiness for a calibrated mixture.
 
-    All dyes reduce transmission at their calibration concentration.
-    White rows additionally lighten the subtractive dye result toward
-    their calibrated white and increase cloudiness.
+    All dyes reduce transmission at their calibration concentration. A
+    white calibration is detected automatically. White additionally
+    lightens the subtractive dye result and increases cloudiness; black
+    and every non-white color use subtractive darkening.
     """
     colorant_values = tuple(colorants)
     color = simulate_silicone_color(base_color, base_volume_ml, colorant_values)
@@ -118,30 +126,15 @@ def simulate_silicone_appearance(
     white_colorants = tuple(
         (colorant, concentration)
         for colorant, concentration in active_colorants
-        if colorant.is_opacifier
+        if _is_white(colorant.calibration_color)
     )
     white_factor = sum(concentration for _colorant, concentration in white_colorants)
     white_coverage = _clamp_unit(white_factor)
-    if white_factor > 0.0:
-
-        def weighted_white(channel: int) -> float:
-            return (
-                sum(
-                    _clamp_unit(colorant.calibration_color[channel]) * concentration
-                    for colorant, concentration in white_colorants
-                )
-                / white_factor
-            )
-
-        white_color: RGB = (
-            weighted_white(0),
-            weighted_white(1),
-            weighted_white(2),
-        )
+    if white_coverage > 0.0:
         color = (
-            color[0] + (white_color[0] - color[0]) * white_coverage,
-            color[1] + (white_color[1] - color[1]) * white_coverage,
-            color[2] + (white_color[2] - color[2]) * white_coverage,
+            color[0] + (1.0 - color[0]) * white_coverage,
+            color[1] + (1.0 - color[1]) * white_coverage,
+            color[2] + (1.0 - color[2]) * white_coverage,
         )
 
     base_cloudiness = _clamp_unit(base_cloudiness)
@@ -149,16 +142,43 @@ def simulate_silicone_appearance(
     return SimulatedSiliconeAppearance(color, transparency, cloudiness)
 
 
+def _linear_channel_to_srgb(channel: float) -> float:
+    """Convert one scene-linear channel to an sRGB channel."""
+    linear = _clamp_unit(channel)
+    return (
+        12.92 * linear if linear <= 0.0031308 else 1.055 * linear ** (1.0 / 2.4) - 0.055
+    )
+
+
+def _srgb_channel_to_linear(channel: float) -> float:
+    """Convert one sRGB channel to a scene-linear channel."""
+    srgb = _clamp_unit(channel)
+    return srgb / 12.92 if srgb <= 0.04045 else ((srgb + 0.055) / 1.055) ** 2.4
+
+
+def saturated_hsl_to_linear_rgb(hue_degrees: float, lightness: float) -> RGB:
+    """Create scene-linear RGB from HSL with saturation fixed at 100%."""
+    hue = (hue_degrees % 360.0) / 360.0
+    srgb = hls_to_rgb(hue, _clamp_unit(lightness), 1.0)
+    return (
+        _srgb_channel_to_linear(srgb[0]),
+        _srgb_channel_to_linear(srgb[1]),
+        _srgb_channel_to_linear(srgb[2]),
+    )
+
+
+def linear_rgb_to_hsl(color: RGB) -> tuple[float, float, float]:
+    """Return conventional sRGB HSL as degrees, saturation, and lightness."""
+    srgb = tuple(_linear_channel_to_srgb(channel) for channel in color)
+    hue, lightness, saturation = rgb_to_hls(*srgb)
+    return (hue * 360.0, saturation, lightness)
+
+
 def linear_rgb_to_srgb8(color: RGB) -> tuple[int, int, int]:
     """Convert scene-linear RGB to conventional 8-bit sRGB values."""
 
     def convert(channel: float) -> int:
-        linear = _clamp_unit(channel)
-        srgb = (
-            12.92 * linear
-            if linear <= 0.0031308
-            else 1.055 * linear ** (1.0 / 2.4) - 0.055
-        )
+        srgb = _linear_channel_to_srgb(channel)
         return int(srgb * 255.0 + 0.5)
 
     return (convert(color[0]), convert(color[1]), convert(color[2]))

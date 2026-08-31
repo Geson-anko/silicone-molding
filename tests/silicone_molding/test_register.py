@@ -287,6 +287,8 @@ class TestColorProfileSettings:
             "is_opacifier",
             "colorant_name",
             "calibration_color",
+            "calibration_hue_degrees",
+            "calibration_lightness_percent",
             "calibration_drops_per_ml",
             "drops",
         ):

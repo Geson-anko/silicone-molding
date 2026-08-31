@@ -404,9 +404,9 @@ class SILMOLD_UL_colorants(bpy.types.UIList):
         colorant = cast(ColorantValues, item)
         row = layout.row(align=True)
         row.prop(colorant, "enabled", text="")
-        row.prop(colorant, "is_opacifier", text="")
         row.prop(colorant, "colorant_name", text="")
-        row.prop(colorant, "calibration_color", text="")
+        row.prop(colorant, "calibration_hue_degrees", text="")
+        row.prop(colorant, "calibration_lightness_percent", text="")
         row.prop(colorant, "calibration_drops_per_ml", text="")
         row.prop(colorant, "drops", text="")
 
@@ -472,22 +472,26 @@ def draw_color_simulator(
     colorants = layout.box()
     colorants.label(text="3. Add Colorants and Enter the Actual Drops")
     colorants.label(
+        text="Dye saturation is fixed at 100%; set Hue and Lightness numerically",
+        icon="INFO",
+    )
+    colorants.label(
         text=(
-            "All dyes: Calibration Drops / mL gives observed color and opacity "
-            "(1.0 default)"
+            "Lightness: 100% = White (lightens), 0% = Black; lower values "
+            "include brown"
         ),
         icon="INFO",
     )
     colorants.label(
-        text="White: enable White / Lighten to also make other colors paler",
+        text=("Calibration Drops / mL controls dye color and opacity " "(1.0 default)"),
         icon="INFO",
     )
     header = colorants.row(align=True)
     for text in (
         "On",
-        "White / Lighten",
         "Dye",
-        "Calibration Color",
+        "Hue (degrees)",
+        "Lightness (%)",
         "Calibration Drops / mL",
         "Actual Drops",
     ):

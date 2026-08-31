@@ -15,12 +15,20 @@ from bpy.props import (
     StringProperty,
 )
 
-from ..core import MIN_SURFACE_CUT_THICKNESS_MM, MIN_THICKNESS_MM
+from ..core import (
+    MIN_SURFACE_CUT_THICKNESS_MM,
+    MIN_THICKNESS_MM,
+    RGB,
+    linear_rgb_to_hsl,
+    saturated_hsl_to_linear_rgb,
+)
 
 _MIN_DENSITY_G_PER_ML = 0.001
 _MIN_MIXTURE_RATIO = 0.001
 _MIN_COLORING_VOLUME_ML = 0.001
 _MIN_CALIBRATION_DROPS_PER_ML = 0.001
+_CALIBRATION_HUE_KEY = "_calibration_hue_degrees"
+_CALIBRATION_LIGHTNESS_KEY = "_calibration_lightness_percent"
 
 _BOOLEAN_SOLVERS = (
     (
@@ -60,6 +68,16 @@ class _MixtureSelectionState(Protocol):
     mixture_active_index: int
     mixture_selection_anchor: int
     mixture_parts: Sequence[_SelectableMixturePart]
+
+
+class _ColorantHSLState(Protocol):
+    """Stored calibration color and hidden HSL endpoint state."""
+
+    calibration_color: Sequence[float]
+
+    def get(self, key: str, default: object | None = None) -> object: ...
+
+    def __setitem__(self, key: str, value: float) -> None: ...
 
 
 class SiliconeMoldingMixturePart(bpy.types.PropertyGroup):
@@ -137,6 +155,71 @@ def _ignore_result_color_edit(
     drawing."""
 
 
+def _derived_calibration_hsl(
+    colorant: bpy.types.PropertyGroup,
+) -> tuple[float, float]:
+    """Derive hue and lightness from an older saved calibration color."""
+    state = cast(_ColorantHSLState, colorant)
+    hue, _saturation, lightness = linear_rgb_to_hsl(
+        cast(RGB, tuple(state.calibration_color[:3]))
+    )
+    return hue, lightness * 100.0
+
+
+def _stored_float(
+    state: _ColorantHSLState,
+    key: str,
+    fallback: float,
+) -> float:
+    """Read one optional ID-property-backed HSL value."""
+    value = state.get(key)
+    return float(value) if isinstance(value, int | float) else fallback
+
+
+def _get_calibration_hue(colorant: bpy.types.PropertyGroup) -> float:
+    """Return saved hue, deriving it for colorants from older blend files."""
+    state = cast(_ColorantHSLState, colorant)
+    derived_hue, _derived_lightness = _derived_calibration_hsl(colorant)
+    return _stored_float(state, _CALIBRATION_HUE_KEY, derived_hue)
+
+
+def _set_calibration_hue(
+    colorant: bpy.types.PropertyGroup,
+    value: float,
+) -> None:
+    """Save hue and rebuild the saturated calibration color."""
+    state = cast(_ColorantHSLState, colorant)
+    hue = value % 360.0
+    _derived_hue, derived_lightness = _derived_calibration_hsl(colorant)
+    lightness = _stored_float(
+        state,
+        _CALIBRATION_LIGHTNESS_KEY,
+        derived_lightness,
+    )
+    state[_CALIBRATION_HUE_KEY] = hue
+    state.calibration_color = saturated_hsl_to_linear_rgb(hue, lightness / 100.0)
+
+
+def _get_calibration_lightness(colorant: bpy.types.PropertyGroup) -> float:
+    """Return saved lightness, deriving it for older blend files."""
+    state = cast(_ColorantHSLState, colorant)
+    _derived_hue, derived_lightness = _derived_calibration_hsl(colorant)
+    return _stored_float(state, _CALIBRATION_LIGHTNESS_KEY, derived_lightness)
+
+
+def _set_calibration_lightness(
+    colorant: bpy.types.PropertyGroup,
+    value: float,
+) -> None:
+    """Save lightness and rebuild the saturated calibration color."""
+    state = cast(_ColorantHSLState, colorant)
+    derived_hue, _derived_lightness = _derived_calibration_hsl(colorant)
+    hue = _stored_float(state, _CALIBRATION_HUE_KEY, derived_hue)
+    lightness = min(max(value, 0.0), 100.0)
+    state[_CALIBRATION_LIGHTNESS_KEY] = lightness
+    state.calibration_color = saturated_hsl_to_linear_rgb(hue, lightness / 100.0)
+
+
 class SiliconeMoldingColorant(bpy.types.PropertyGroup):
     """One calibrated dye dose inside a named color profile."""
 
@@ -148,13 +231,13 @@ class SiliconeMoldingColorant(bpy.types.PropertyGroup):
     )
 
     is_opacifier: BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
-        name="White / Lighten",
+        name="Legacy White / Lighten",
         description=(
-            "Treat this as white pigment that additionally lightens other dyes "
-            "toward Calibration Color and makes the result milky"
+            "Legacy saved value; white is now detected automatically from "
+            "Lightness 100%"
         ),
         default=False,
-        update=_update_colorant,
+        options={"HIDDEN"},
     )
 
     colorant_name: StringProperty(  # pyright: ignore[reportInvalidTypeForm]
@@ -165,14 +248,40 @@ class SiliconeMoldingColorant(bpy.types.PropertyGroup):
     calibration_color: FloatVectorProperty(  # pyright: ignore[reportInvalidTypeForm]
         name="Calibration Color",
         description=(
-            "Observed color at this dye's Calibration Drops / mL in the current base"
+            "Saved scene-linear calibration color generated from Hue and Lightness"
         ),
         subtype="COLOR",
         size=3,
         min=0.0,
         max=1.0,
-        default=(1.0, 1.0, 1.0),
+        default=(1.0, 0.0, 0.0),
+        options={"HIDDEN"},
         update=_update_colorant,
+    )
+
+    calibration_hue_degrees: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Hue (degrees)",
+        description="Dye hue from 0 to 360 degrees; saturation is fixed at 100%",
+        min=0.0,
+        max=360.0,
+        precision=1,
+        step=100,
+        get=_get_calibration_hue,
+        set=_set_calibration_hue,
+    )
+
+    calibration_lightness_percent: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Lightness (%)",
+        description=(
+            "Dye lightness: 100% is white and lightens other colors, 0% is "
+            "black, and intermediate values include colors such as brown"
+        ),
+        min=0.0,
+        max=100.0,
+        precision=1,
+        step=100,
+        get=_get_calibration_lightness,
+        set=_set_calibration_lightness,
     )
 
     calibration_drops_per_ml: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
