@@ -213,6 +213,20 @@ class TestAddingASurfaceCut:
         assert modifier.name == SURFACE_CUT_MODIFIER_NAME
         assert modifier.type == "NODES"
         assert len(surface.modifiers) == 0
+        modifier = cast(bpy.types.NodesModifier, modifier)
+        assert modifier.node_group is not None
+        interface = modifier.node_group.interface
+        assert interface is not None
+        cutting_surface = next(
+            item for item in interface.items_tree if item.name == "Cutting Surface"
+        )
+        even_thickness = next(
+            item for item in interface.items_tree if item.name == "Even Thickness"
+        )
+        solver = next(item for item in interface.items_tree if item.name == "Solver")
+        assert cutting_surface.default_value == surface
+        assert not even_thickness.default_value
+        assert solver.default_value == "Manifold"
 
     def test_configured_thickness_and_minimum_reach_the_modifier_in_scene_units(
         self, settings: bpy.types.PropertyGroup, add_object: AddObject
@@ -239,7 +253,7 @@ class TestAddingASurfaceCut:
         assert thickness.default_value == pytest.approx(0.25)
         assert thickness.min_value == pytest.approx(0.001)
 
-    def test_the_integrated_boolean_is_a_manifold_difference(
+    def test_the_integrated_boolean_offers_manifold_and_exact_difference(
         self, settings: bpy.types.PropertyGroup, add_object: AddObject
     ) -> None:
         target, _surface = _set_inputs(settings, add_object)
@@ -250,13 +264,14 @@ class TestAddingASurfaceCut:
         assert result == {"FINISHED"}
         modifier = cast(bpy.types.NodesModifier, target.modifiers[0])
         assert modifier.node_group is not None
-        boolean = next(
+        booleans = [
             node
             for node in modifier.node_group.nodes
             if isinstance(node, bpy.types.GeometryNodeMeshBoolean)
-        )
-        assert boolean.operation == "DIFFERENCE"
-        assert boolean.solver == "MANIFOLD"
+        ]
+        assert len(booleans) == 2
+        assert all(node.operation == "DIFFERENCE" for node in booleans)
+        assert {node.solver for node in booleans} == {"MANIFOLD", "EXACT"}
 
     def test_repeating_the_action_adds_another_integrated_modifier(
         self, settings: bpy.types.PropertyGroup, add_object: AddObject
