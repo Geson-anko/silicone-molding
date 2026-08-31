@@ -49,13 +49,12 @@ class TestNamedProfiles:
         warm.base_color = (1.0, 0.8, 0.5)
 
         cool = _add_profile(settings)
-        cool.profile_name = "Cool Cloudy"
+        cool.profile_name = "Cool"
         cool.base_color = (0.5, 0.7, 1.0)
-        cool.cloudiness = 0.75
 
         assert [profile.profile_name for profile in settings.color_profiles] == [
             "Warm Clear",
-            "Cool Cloudy",
+            "Cool",
         ]
         assert warm.preview_material != cool.preview_material
         assert tuple(warm.preview_material.diffuse_color[:3]) == pytest.approx(
@@ -116,7 +115,7 @@ class TestColorants:
 
         assert tuple(first.preview_material.diffuse_color[:3]) == pytest.approx(
             (0.0, 0.0, 1.0),
-            abs=2e-6,
+            abs=1e-4,
         )
         assert tuple(second.preview_material.diffuse_color[:3]) == pytest.approx(
             second_before
@@ -128,7 +127,6 @@ class TestColorants:
         profile = _add_profile(settings)
         profile.base_volume_ml = 1.0
         profile.transparency = 0.8
-        profile.cloudiness = 0.2
         bpy.ops.silicone_molding.add_colorant()
         blue = profile.colorants[0]
         blue.calibration_hue_degrees = 240.0
@@ -139,7 +137,7 @@ class TestColorants:
 
         assert tuple(profile.result_color) == pytest.approx(
             (0.0, 0.0, 1.0),
-            abs=2e-6,
+            abs=1e-4,
         )
         assert shader.inputs["Transmission Weight"].default_value == pytest.approx(0.0)
 
@@ -152,10 +150,10 @@ class TestColorants:
         shader = profile.preview_material.node_tree.nodes[_SHADER_NODE_NAME]
 
         assert shader.inputs["Transmission Weight"].default_value == pytest.approx(0.0)
-        assert shader.inputs["Subsurface Weight"].default_value == pytest.approx(0.6)
+        assert shader.inputs["Subsurface Weight"].default_value == pytest.approx(0.0)
         assert tuple(profile.result_color) == pytest.approx(
-            (0.5, 0.5, 1.0),
-            abs=2e-6,
+            (0.036822, 0.107334, 1.0),
+            abs=1e-6,
         )
 
 

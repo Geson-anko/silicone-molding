@@ -1,4 +1,4 @@
-"""Calibrated optical-density mixing for silicone colorants."""
+"""Calibrated spectral-reflectance mixing for silicone colorants."""
 
 import pytest
 
@@ -30,15 +30,18 @@ def test_dye_specific_calibration_concentration_reproduces_its_color() -> None:
 
     result = simulate_silicone_color(WHITE, 100.0, [colorant])
 
-    assert result == pytest.approx(calibration)
+    assert result == pytest.approx(calibration, abs=1e-4)
 
 
-def test_doubling_base_volume_halves_the_optical_density() -> None:
+def test_doubling_base_volume_mixes_equal_parts_base_and_calibration_color() -> None:
     colorant = CalibratedColorant((0.25, 0.64, 0.81), 1.0, 100.0)
 
     result = simulate_silicone_color(WHITE, 200.0, [colorant])
 
-    assert result == pytest.approx((0.5, 0.8, 0.9))
+    assert result == pytest.approx(
+        (0.509796, 0.802891, 0.901514),
+        abs=1e-6,
+    )
 
 
 def test_multiple_colorants_are_independent_of_row_order() -> None:
@@ -62,13 +65,13 @@ def test_disabled_and_zero_drop_rows_do_not_contribute() -> None:
     assert result == pytest.approx(WHITE)
 
 
-def test_calibration_cannot_make_a_channel_brighter_than_the_base() -> None:
+def test_calibration_color_can_be_brighter_than_the_base() -> None:
     base = (0.8, 0.7, 0.6)
     colorant = CalibratedColorant((0.9, 0.5, 0.3), 1.0, 100.0)
 
     result = simulate_silicone_color(base, 100.0, [colorant])
 
-    assert result == pytest.approx((0.8, 0.5, 0.3))
+    assert result == pytest.approx((0.9, 0.5, 0.3), abs=2e-4)
 
 
 @pytest.mark.parametrize("volume", [0.0, -1.0])
@@ -84,20 +87,20 @@ def test_non_positive_calibration_drops_are_rejected_when_used() -> None:
         simulate_silicone_color(WHITE, 100.0, [colorant])
 
 
-def test_white_is_detected_from_its_color_and_reaches_opaque_at_calibration() -> None:
+def test_white_uses_the_shared_spectral_rule_and_reaches_opaque_at_calibration() -> (
+    None
+):
     white = CalibratedColorant(WHITE, 1.0, 100.0)
 
     result = simulate_silicone_appearance(
         (1.0, 0.9, 0.7),
         100.0,
         0.8,
-        0.2,
         [white],
     )
 
-    assert result.color == pytest.approx(WHITE)
+    assert result.color == pytest.approx(WHITE, abs=1e-4)
     assert result.transparency == pytest.approx(0.0)
-    assert result.cloudiness == pytest.approx(1.0)
 
 
 def test_white_makes_another_dye_paler_below_its_calibration_concentration() -> None:
@@ -108,13 +111,14 @@ def test_white_makes_another_dye_paler_below_its_calibration_concentration() -> 
         WHITE,
         100.0,
         0.8,
-        0.2,
         [blue, half_strength_white],
     )
 
-    assert result.color == pytest.approx((0.6, 0.7, 0.9))
+    assert result.color == pytest.approx(
+        (0.347639, 0.547790, 0.864344),
+        abs=1e-6,
+    )
     assert result.transparency == pytest.approx(0.0)
-    assert result.cloudiness == pytest.approx(0.6)
 
 
 @pytest.mark.parametrize(
@@ -130,23 +134,22 @@ def test_every_dye_reaches_opaque_at_its_calibration_concentration(
 ) -> None:
     dye = CalibratedColorant(calibration, 1.0, 100.0)
 
-    result = simulate_silicone_appearance(WHITE, 100.0, 0.7, 0.3, [dye])
+    result = simulate_silicone_appearance(WHITE, 100.0, 0.7, [dye])
 
-    assert result.color == pytest.approx(calibration)
+    assert result.color == pytest.approx(calibration, abs=1e-4)
     assert result.transparency == pytest.approx(0.0)
-    assert result.cloudiness == pytest.approx(0.3)
 
 
-def test_half_strength_dye_halves_transparency_without_adding_white_cloudiness() -> (
-    None
-):
+def test_half_strength_dye_halves_transparency() -> None:
     dye = CalibratedColorant((0.25, 0.64, 0.81), 1.0, 50.0)
 
-    result = simulate_silicone_appearance(WHITE, 100.0, 0.8, 0.2, [dye])
+    result = simulate_silicone_appearance(WHITE, 100.0, 0.8, [dye])
 
-    assert result.color == pytest.approx((0.5, 0.8, 0.9))
+    assert result.color == pytest.approx(
+        (0.509796, 0.802891, 0.901514),
+        abs=1e-6,
+    )
     assert result.transparency == pytest.approx(0.4)
-    assert result.cloudiness == pytest.approx(0.2)
 
 
 @pytest.mark.parametrize(
@@ -191,13 +194,11 @@ def test_black_and_non_white_saturated_dyes_use_subtractive_darkening() -> None:
         100.0,
     )
 
-    black_result = simulate_silicone_appearance(WHITE, 100.0, 0.8, 0.2, [black])
-    brown_result = simulate_silicone_appearance(WHITE, 100.0, 0.8, 0.2, [brown])
+    black_result = simulate_silicone_appearance(WHITE, 100.0, 0.8, [black])
+    brown_result = simulate_silicone_appearance(WHITE, 100.0, 0.8, [brown])
 
     assert max(black_result.color) < 1e-5
-    assert brown_result.color == pytest.approx(brown.calibration_color, abs=2e-6)
-    assert black_result.cloudiness == pytest.approx(0.2)
-    assert brown_result.cloudiness == pytest.approx(0.2)
+    assert brown_result.color == pytest.approx(brown.calibration_color, abs=1e-4)
 
 
 def test_scene_linear_color_formats_are_copy_ready_srgb_values() -> None:

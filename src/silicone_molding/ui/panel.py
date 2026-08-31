@@ -447,7 +447,7 @@ def draw_color_simulator(
         return
 
     base = layout.box()
-    base.label(text="2. Set the Silicone Base Color, Volume, and Appearance")
+    base.label(text="2. Set the Silicone Base Color, Volume, and Transparency")
     volume = base.row(align=True)
     volume.prop(profile, "base_volume_ml")
     volume.operator(
@@ -462,28 +462,14 @@ def draw_color_simulator(
         text="Base Transparency (1 clear / 0 opaque)",
         slider=True,
     )
-    base.prop(
-        profile,
-        "cloudiness",
-        text="Base Cloudiness (0 clear / 1 milky white)",
-        slider=True,
-    )
-
     colorants = layout.box()
     colorants.label(text="3. Add Colorants and Enter the Actual Drops")
     colorants.label(
-        text="Dye saturation is fixed at 100%; set Hue and Lightness numerically",
+        text="Saturation 100%; Lightness 100% = White, 0% = Black",
         icon="INFO",
     )
     colorants.label(
-        text=(
-            "Lightness: 100% = White (lightens), 0% = Black; lower values "
-            "include brown"
-        ),
-        icon="INFO",
-    )
-    colorants.label(
-        text=("Calibration Drops / mL controls dye color and opacity " "(1.0 default)"),
+        text="Calibration Drops / mL: measured color/opacity point (1.0 estimate)",
         icon="INFO",
     )
     header = colorants.row(align=True)
@@ -544,7 +530,6 @@ def draw_color_simulator(
 
     final_appearance = result.row(align=True)
     final_appearance.label(text=f"Result Transparency: {calculated.transparency:.2f}")
-    final_appearance.label(text=f"Result Cloudiness: {calculated.cloudiness:.2f}")
     final_appearance.operator(
         SILMOLD_OT_apply_color_material.bl_idname,
         text="Apply to Selected",

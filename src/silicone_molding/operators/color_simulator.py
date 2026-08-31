@@ -52,7 +52,6 @@ class ColorProfileValues(Protocol):
     base_volume_ml: float
     base_color: Sequence[float]
     transparency: float
-    cloudiness: float
     colorants: ColorantCollection
     colorant_active_index: int
     preview_material: bpy.types.Material | None
@@ -112,7 +111,6 @@ def calculate_profile_appearance(
         cast(RGB, tuple(profile.base_color[:3])),
         profile.base_volume_ml,
         profile.transparency,
-        profile.cloudiness,
         colorants,
     )
 
@@ -142,9 +140,7 @@ def _configure_material(
     cast(
         _ValueSocket, shader.inputs["Transmission Weight"]
     ).default_value = appearance.transparency
-    cast(
-        _ValueSocket, shader.inputs["Subsurface Weight"]
-    ).default_value = appearance.cloudiness
+    cast(_ValueSocket, shader.inputs["Subsurface Weight"]).default_value = 0.0
     cast(_ValueSocket, shader.inputs["IOR"]).default_value = 1.41
     cast(_ValueSocket, shader.inputs["Roughness"]).default_value = 0.2
     cast(_ValueSocket, shader.inputs["Alpha"]).default_value = 1.0
@@ -182,7 +178,6 @@ def _new_profile(settings: ColorSimulatorSettings) -> ColorProfileValues:
     profile.base_volume_ml = 100.0
     profile.base_color = (1.0, 1.0, 1.0)
     profile.transparency = 1.0
-    profile.cloudiness = 0.0
     profile.colorant_active_index = -1
     settings.color_profile_active_index = len(settings.color_profiles) - 1
     return profile

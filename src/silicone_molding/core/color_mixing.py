@@ -1,13 +1,13 @@
-"""Approximate subtractive mixing for calibrated silicone colorants."""
+"""Spectral subtractive mixing for calibrated silicone colorants."""
 
 from collections.abc import Iterable
 from colorsys import hls_to_rgb, rgb_to_hls
 from dataclasses import dataclass
-from math import exp, log
+from math import fsum
+
+from ._spectral import mix_spectral_reflectance
 
 RGB = tuple[float, float, float]
-
-_MIN_CHANNEL = 1e-6
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,7 +26,6 @@ class SimulatedSiliconeAppearance:
 
     color: RGB
     transparency: float
-    cloudiness: float
 
 
 def _clamp_unit(value: float) -> float:
@@ -44,72 +43,58 @@ def _concentration_factor(
     return colorant.drops / (base_volume_ml * colorant.calibration_drops_per_ml)
 
 
-def _absorbance(color: RGB) -> RGB:
-    """Convert scene-linear transmittance-like RGB to optical density."""
-    return (
-        -log(min(max(color[0], _MIN_CHANNEL), 1.0)),
-        -log(min(max(color[1], _MIN_CHANNEL), 1.0)),
-        -log(min(max(color[2], _MIN_CHANNEL), 1.0)),
-    )
-
-
-def _is_white(color: RGB) -> bool:
-    """Return whether a saturated-HSL calibration is the white endpoint."""
-    return all(_clamp_unit(channel) == 1.0 for channel in color)
-
-
 def simulate_silicone_color(
     base_color: RGB,
     base_volume_ml: float,
     colorants: Iterable[CalibratedColorant],
 ) -> RGB:
-    """Return a scene-linear RGB estimate for a calibrated colorant mixture.
+    """Return a scene-linear RGB estimate from representative spectra.
 
-    Each calibration color is the observed color at its dye-specific
-    calibration drops per mL in the currently selected base. Optical-
-    density contributions are scaled by the actual concentration, then
-    added so the result is independent of row order.
+    Each calibration color is treated as the result at its dye-specific
+    calibration concentration. Colors are upsampled to representative
+    reflectance spectra, then mixed by a concentration-weighted
+    geometric mean. This gives white, black, and chromatic colorants the
+    same mixing rule and keeps the result independent of row order.
     """
     if base_volume_ml <= 0.0:
         raise ValueError("Base volume must be greater than zero")
 
-    base_absorbance = _absorbance(base_color)
-    total_absorbance = list(base_absorbance)
-
+    active_colorants: list[tuple[CalibratedColorant, float]] = []
     for colorant in colorants:
-        if not colorant.enabled or _is_white(colorant.calibration_color):
+        if not colorant.enabled or colorant.drops <= 0.0:
             continue
-        if colorant.drops <= 0.0:
-            continue
-        calibration_absorbance = _absorbance(colorant.calibration_color)
-        concentration_factor = _concentration_factor(colorant, base_volume_ml)
-        for channel in range(3):
-            contribution = max(
-                calibration_absorbance[channel] - base_absorbance[channel],
-                0.0,
-            )
-            total_absorbance[channel] += contribution * concentration_factor
+        active_colorants.append(
+            (colorant, _concentration_factor(colorant, base_volume_ml))
+        )
 
-    return (
-        exp(-total_absorbance[0]),
-        exp(-total_absorbance[1]),
-        exp(-total_absorbance[2]),
+    if not active_colorants:
+        return base_color
+
+    total_concentration = fsum(
+        concentration for _colorant, concentration in active_colorants
     )
+    weighted_colors = [
+        (base_color, max(1.0 - total_concentration, 0.0)),
+        *(
+            (colorant.calibration_color, concentration)
+            for colorant, concentration in active_colorants
+        ),
+    ]
+    return mix_spectral_reflectance(weighted_colors)
 
 
 def simulate_silicone_appearance(
     base_color: RGB,
     base_volume_ml: float,
     base_transparency: float,
-    base_cloudiness: float,
     colorants: Iterable[CalibratedColorant],
 ) -> SimulatedSiliconeAppearance:
-    """Return color, transparency, and cloudiness for a calibrated mixture.
+    """Return color and transparency for a calibrated mixture.
 
-    All dyes reduce transmission at their calibration concentration. A
-    white calibration is detected automatically. White additionally
-    lightens the subtractive dye result and increases cloudiness; black
-    and every non-white color use subtractive darkening.
+    All colorants share the spectral mixing rule and reduce transmission
+    at their calibration concentration. The opacity rule remains an
+    empirical calibration separate from the representative color
+    calculation.
     """
     colorant_values = tuple(colorants)
     color = simulate_silicone_color(base_color, base_volume_ml, colorant_values)
@@ -119,27 +104,10 @@ def simulate_silicone_appearance(
         if colorant.enabled and colorant.drops > 0.0
     )
     opacity_factor = _clamp_unit(
-        sum(concentration for _colorant, concentration in active_colorants)
+        fsum(concentration for _colorant, concentration in active_colorants)
     )
     transparency = _clamp_unit(base_transparency) * (1.0 - opacity_factor)
-
-    white_colorants = tuple(
-        (colorant, concentration)
-        for colorant, concentration in active_colorants
-        if _is_white(colorant.calibration_color)
-    )
-    white_factor = sum(concentration for _colorant, concentration in white_colorants)
-    white_coverage = _clamp_unit(white_factor)
-    if white_coverage > 0.0:
-        color = (
-            color[0] + (1.0 - color[0]) * white_coverage,
-            color[1] + (1.0 - color[1]) * white_coverage,
-            color[2] + (1.0 - color[2]) * white_coverage,
-        )
-
-    base_cloudiness = _clamp_unit(base_cloudiness)
-    cloudiness = base_cloudiness + (1.0 - base_cloudiness) * white_coverage
-    return SimulatedSiliconeAppearance(color, transparency, cloudiness)
+    return SimulatedSiliconeAppearance(color, transparency)
 
 
 def _linear_channel_to_srgb(channel: float) -> float:

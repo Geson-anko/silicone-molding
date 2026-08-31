@@ -45,6 +45,7 @@ EXPECTED_VERTEX_COUNT = 16
 EXPECTED_FACE_COUNT = 12
 EXPECTED_EXTENT = CUBE_SIZE / 2 + THICKNESS
 TOLERANCE = 1e-5
+COLOR_TOLERANCE = 2e-4
 
 # A 2 cm cube for the volume checks: 0.02 BU on a side with the default scene
 # scale of 1 BU = 1 m, which is 8 mL.
@@ -213,7 +214,7 @@ def check_named_color_profiles_update_and_apply_independently() -> None:
     cool.base_color = (0.5, 0.7, 1.0)
     assert warm.preview_material != cool.preview_material
     assert all(
-        abs(actual - expected) <= TOLERANCE
+        abs(actual - expected) <= COLOR_TOLERANCE
         for actual, expected in zip(
             warm.preview_material.diffuse_color[:3],
             (0.214041, 0.050876, 0.0),
@@ -249,7 +250,6 @@ def check_mixture_settings_survive_save_and_reload() -> None:
     clear.base_volume_ml = 125.0
     clear.base_color = (1.0, 0.9, 0.7)
     clear.transparency = 0.9
-    clear.cloudiness = 0.1
     bpy.ops.silicone_molding.add_colorant()
     amber = clear.colorants[0]
     amber.colorant_name = "Amber"
@@ -262,7 +262,6 @@ def check_mixture_settings_survive_save_and_reload() -> None:
     opaque = settings.color_profiles[1]
     opaque.profile_name = "Opaque White"
     opaque.transparency = 0.8
-    opaque.cloudiness = 0.2
     bpy.ops.silicone_molding.add_colorant()
     blue = opaque.colorants[0]
     blue.colorant_name = "Blue"
@@ -325,7 +324,6 @@ def check_mixture_settings_survive_save_and_reload() -> None:
             )
         )
         assert abs(loaded_clear.transparency - 0.9) <= TOLERANCE
-        assert abs(loaded_clear.cloudiness - 0.1) <= TOLERANCE
         assert len(loaded_clear.colorants) == 1
         loaded_amber = loaded_clear.colorants[0]
         assert loaded_amber.colorant_name == "Amber"
@@ -334,7 +332,6 @@ def check_mixture_settings_survive_save_and_reload() -> None:
         assert abs(loaded_amber.calibration_drops_per_ml - 2.0) <= TOLERANCE
         assert abs(loaded_amber.drops - 0.5) <= TOLERANCE
         assert abs(loaded_opaque.transparency - 0.8) <= TOLERANCE
-        assert abs(loaded_opaque.cloudiness - 0.2) <= TOLERANCE
         assert len(loaded_opaque.colorants) == 2
         loaded_blue = loaded_opaque.colorants[0]
         loaded_white = loaded_opaque.colorants[1]
@@ -348,12 +345,12 @@ def check_mixture_settings_survive_save_and_reload() -> None:
             "Silicone Molding Shader"
         ]
         assert abs(shader.inputs["Transmission Weight"].default_value) <= TOLERANCE
-        assert abs(shader.inputs["Subsurface Weight"].default_value - 0.6) <= TOLERANCE
+        assert abs(shader.inputs["Subsurface Weight"].default_value) <= TOLERANCE
         assert all(
             abs(actual - expected) <= TOLERANCE
             for actual, expected in zip(
                 loaded_opaque.preview_material.diffuse_color,
-                (0.5, 0.5, 1.0, 1.0),
+                (0.036822, 0.107334, 1.0, 1.0),
                 strict=True,
             )
         )

@@ -347,13 +347,12 @@ class SiliconeMoldingColorProfile(bpy.types.PropertyGroup):
     )
 
     cloudiness: FloatProperty(  # pyright: ignore[reportInvalidTypeForm]
-        name="Base Cloudiness",
-        description="Original silicone: 0.0 is clear and 1.0 is milky white",
+        name="Legacy Base Cloudiness",
+        description="Legacy saved value; cloudiness is no longer simulated",
         default=0.0,
         min=0.0,
         max=1.0,
-        subtype="FACTOR",
-        update=_update_color_profile,
+        options={"HIDDEN"},
     )
 
     result_color: FloatVectorProperty(  # pyright: ignore[reportInvalidTypeForm]
