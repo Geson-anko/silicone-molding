@@ -17,6 +17,13 @@ PART_VERTICES = [
     (3.0, 1.0, 0.0),
 ]
 PART_FACES = [(0, 1, 2), (3, 4, 5)]
+SECOND_SOURCE_VERTICES = [
+    (0.0, 0.0, 0.0),
+    (1.0, 0.0, 0.0),
+    (1.0, 1.0, 0.0),
+    (0.0, 1.0, 0.0),
+]
+SECOND_SOURCE_FACES = [(0, 1, 2, 3)]
 
 
 @pytest.fixture(scope="module")
@@ -64,6 +71,25 @@ def test_the_button_is_available_for_a_selected_mesh(
     assert SILMOLD_OT_separate_loose_parts.poll(bpy.context)
 
 
+def test_the_button_is_disabled_with_an_empty_selection(
+    loose_object: bpy.types.Object,
+) -> None:
+    loose_object.select_set(False)
+
+    assert not SILMOLD_OT_separate_loose_parts.poll(bpy.context)
+
+
+def test_the_button_is_disabled_when_only_a_non_mesh_is_selected(
+    loose_object: bpy.types.Object,
+) -> None:
+    loose_object.select_set(False)
+    empty = bpy.data.objects.new("SelectedEmpty", None)
+    bpy.context.scene.collection.objects.link(empty)
+    empty.select_set(True)
+
+    assert not SILMOLD_OT_separate_loose_parts.poll(bpy.context)
+
+
 def test_the_button_is_disabled_outside_object_mode(
     loose_object: bpy.types.Object,
 ) -> None:
@@ -101,6 +127,33 @@ def test_applied_parts_are_flat_in_source_collections_and_the_source_is_hidden(
     assert all(len(part.data.polygons) == 5 for part in parts)
     assert set(bpy.context.selected_objects) == set(parts)
     assert bpy.context.active_object in parts
+
+
+def test_selected_meshes_are_processed_in_context_order_while_non_meshes_are_ignored(
+    loose_object: bpy.types.Object,
+) -> None:
+    empty = bpy.data.objects.new("SelectedEmpty", None)
+    bpy.context.scene.collection.objects.link(empty)
+    empty.select_set(True)
+
+    second_mesh = bpy.data.meshes.new("AlphabeticallyEarlierMesh")
+    second_mesh.from_pydata(SECOND_SOURCE_VERTICES, [], SECOND_SOURCE_FACES)
+    second_mesh.update()
+    second_source = bpy.data.objects.new("AlphabeticallyEarlier", second_mesh)
+    bpy.context.scene.collection.objects.link(second_source)
+    second_source.select_set(True)
+
+    assert list(bpy.context.selected_objects) == [loose_object, empty, second_source]
+
+    result = bpy.ops.silicone_molding.separate_loose_parts()
+
+    assert result == {"FINISHED"}
+    assert loose_object.hide_get()
+    assert second_source.hide_get()
+    assert not empty.hide_get()
+    assert empty.select_get()
+    assert bpy.context.active_object is not None
+    assert len(bpy.context.active_object.data.vertices) == 3
 
 
 @pytest.mark.api_contract

@@ -65,16 +65,24 @@ class TestNamedProfiles:
             (0.5, 0.7, 1.0)
         )
 
-    def test_removing_a_profile_keeps_its_applied_material_datablock(
-        self, settings: bpy.types.PropertyGroup
+    def test_removing_a_profile_keeps_its_material_assigned_to_a_mesh(
+        self,
+        settings: bpy.types.PropertyGroup,
+        cube_object: bpy.types.Object,
     ) -> None:
         profile = _add_profile(settings)
         material = profile.preview_material
+        for obj in bpy.context.selected_objects or ():
+            obj.select_set(False)
+        cube_object.select_set(True)
+        bpy.context.view_layer.objects.active = cube_object
+        bpy.ops.silicone_molding.apply_color_material()
 
         result = bpy.ops.silicone_molding.remove_color_profile()
 
         assert result == {"FINISHED"}
         assert len(settings.color_profiles) == 0
+        assert cube_object.active_material == material
         assert material.name in bpy.data.materials
 
 
@@ -172,6 +180,30 @@ class TestColorants:
         assert tuple(second.preview_material.diffuse_color[:3]) == pytest.approx(
             second_before
         )
+
+    def test_removing_the_active_colorant_restores_the_base_appearance(
+        self, settings: bpy.types.PropertyGroup
+    ) -> None:
+        profile = _add_profile(settings)
+        profile.base_volume_ml = 1.0
+        profile.transparency = 0.8
+        bpy.ops.silicone_molding.add_colorant()
+        colorant = profile.colorants[0]
+        colorant.calibration_hue_degrees = 240.0
+        colorant.calibration_lightness_percent = 50.0
+        colorant.drops = 1.0
+
+        result = bpy.ops.silicone_molding.remove_colorant()
+
+        shader = profile.preview_material.node_tree.nodes[_SHADER_NODE_NAME]
+        assert result == {"FINISHED"}
+        assert len(profile.colorants) == 0
+        assert profile.colorant_active_index == -1
+        assert tuple(profile.result_color) == pytest.approx((1.0, 1.0, 1.0))
+        assert tuple(profile.preview_material.diffuse_color[:3]) == pytest.approx(
+            (1.0, 1.0, 1.0)
+        )
+        assert shader.inputs["Transmission Weight"].default_value == pytest.approx(0.8)
 
     def test_all_dyes_reduce_transmission_and_white_also_lightens_the_color(
         self, settings: bpy.types.PropertyGroup
