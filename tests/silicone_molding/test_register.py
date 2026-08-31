@@ -72,20 +72,38 @@ class TestRegistration:
         ):
             assert name in operators
 
-    def test_the_sidebar_registers_as_a_parent_with_two_sub_panels(
+    def test_the_color_simulator_operators_become_callable(
+        self, registered: None
+    ) -> None:
+        operators = dir(bpy.ops.silicone_molding)
+        for name in (
+            "add_color_profile",
+            "remove_color_profile",
+            "add_colorant",
+            "remove_colorant",
+            "copy_mixture_volume_to_coloring",
+            "apply_color_material",
+        ):
+            assert name in operators
+
+    def test_the_sidebar_registers_as_a_parent_with_three_sub_panels(
         self, registered: None
     ) -> None:
         # AC-56 / FR-8: Blender resolves `bl_parent_id` while registering, so
         # a sub-panel registered before SILMOLD_PT_main raises RuntimeError
         # and takes the whole add-on down with it. The module fixture is what
         # actually detects that regression; this test names the guarantee and
-        # confirms Blender resolved both children.
+        # confirms Blender resolved every child.
         types = dir(bpy.types)
         assert "SILMOLD_PT_main" in types
         assert "SILMOLD_PT_measurement" in types
         assert "SILMOLD_PT_mixture_calculator" in types
         assert "SILMOLD_PT_processing" in types
         assert "SILMOLD_UL_mixture_parts" in types
+        assert "SILMOLD_PT_coloring" in types
+        assert "SILMOLD_PT_color_simulator" in types
+        assert "SILMOLD_UL_color_profiles" in types
+        assert "SILMOLD_UL_colorants" in types
 
 
 class TestSolidifySettings:
@@ -234,3 +252,63 @@ class TestMixtureSettings:
         assert settings.mixture_density_b_g_per_ml > 0.0
         assert settings.mixture_ratio_a > 0.0
         assert settings.mixture_ratio_b > 0.0
+
+
+class TestColorProfileSettings:
+    @pytest.mark.api_contract
+    def test_scene_settings_carry_named_color_profiles(self, registered: None) -> None:
+        properties = bpy.context.scene.silicone_molding.bl_rna.properties
+        assert "color_profiles" in properties
+        assert "color_profile_active_index" in properties
+
+    @pytest.mark.api_contract
+    def test_profiles_and_colorants_carry_the_saved_inputs(
+        self, registered: None
+    ) -> None:
+        settings = bpy.context.scene.silicone_molding
+        settings.color_profiles.clear()
+        profile = settings.color_profiles.add()
+        colorant = profile.colorants.add()
+
+        for name in (
+            "profile_name",
+            "base_volume_ml",
+            "base_color",
+            "transparency",
+            "cloudiness",
+            "result_color",
+            "colorants",
+            "colorant_active_index",
+            "preview_material",
+        ):
+            assert name in profile.bl_rna.properties
+        for name in (
+            "enabled",
+            "is_opacifier",
+            "colorant_name",
+            "calibration_color",
+            "calibration_hex",
+            "calibration_hue_degrees",
+            "calibration_lightness_percent",
+            "calibration_drops_per_ml",
+            "drops",
+        ):
+            assert name in colorant.bl_rna.properties
+
+        settings.color_profiles.clear()
+
+    def test_colorants_expose_an_editable_color_picker_and_hex_input(
+        self, registered: None
+    ) -> None:
+        settings = bpy.context.scene.silicone_molding
+        settings.color_profiles.clear()
+        profile = settings.color_profiles.add()
+        colorant = profile.colorants.add()
+
+        color = colorant.bl_rna.properties["calibration_color"]
+        hex_color = colorant.bl_rna.properties["calibration_hex"]
+        assert color.subtype == "COLOR"
+        assert not color.is_hidden
+        assert hex_color.type == "STRING"
+
+        settings.color_profiles.clear()

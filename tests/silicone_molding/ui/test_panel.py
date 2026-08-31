@@ -3,8 +3,8 @@
 Source of truth: ``memory/specs/volume_measurement.md`` §5.8, acceptance
 criteria AC-60 -- AC-65.
 
-The sidebar is one header-only parent panel with two collapsible children,
-``Measurement`` above ``Processing`` (FR-3, FR-4). What a background run can
+The sidebar is one header-only parent panel with three collapsible children,
+``Measurement``, ``Coloring``, then ``Processing``. What a background run can
 state about that structure is the class-level declaration: who the parent
 is, in which order the children are drawn, and that neither child hides or
 collapses itself. The contents of ``draw`` cannot be reached without a
@@ -18,10 +18,14 @@ asserted in ``tests/silicone_molding/test_register.py``.
 import pytest
 
 from silicone_molding.ui import (
+    SILMOLD_PT_color_simulator,
+    SILMOLD_PT_coloring,
     SILMOLD_PT_main,
     SILMOLD_PT_measurement,
     SILMOLD_PT_mixture_calculator,
     SILMOLD_PT_processing,
+    SILMOLD_UL_color_profiles,
+    SILMOLD_UL_colorants,
     SILMOLD_UL_mixture_parts,
 )
 
@@ -35,23 +39,35 @@ class TestTheSubPanelsSitInsideTheMainPanel:
         # AC-62 / FR-3
         assert SILMOLD_PT_processing.bl_parent_id == SILMOLD_PT_main.bl_idname
 
+    def test_coloring_is_a_child_of_the_main_panel(self) -> None:
+        assert SILMOLD_PT_coloring.bl_parent_id == SILMOLD_PT_main.bl_idname
+
     def test_measurement_is_drawn_above_processing(self) -> None:
         # AC-63 / FR-4: the order is declared with `bl_order` so that it does
         # not depend on the order of `_CLASSES`. Only the relation is fixed
         # here; the literal values are free to change.
         assert SILMOLD_PT_measurement.bl_order < SILMOLD_PT_processing.bl_order
 
+    def test_coloring_sits_between_measurement_and_processing(self) -> None:
+        assert (
+            SILMOLD_PT_measurement.bl_order
+            < SILMOLD_PT_coloring.bl_order
+            < SILMOLD_PT_processing.bl_order
+        )
+
 
 class TestTheSubPanelsAreOpenAndAlwaysVisible:
     def test_neither_sub_panel_starts_collapsed(self) -> None:
-        # AC-64 / FR-6: both sections are open on first draw. `bl_options` is
+        # AC-64 / FR-6: all sections are open on first draw. `bl_options` is
         # read with a default because Blender leaves the attribute undefined
         # unless the class sets it, and undefined already means "open".
         measurement_options = getattr(SILMOLD_PT_measurement, "bl_options", frozenset())
         processing_options = getattr(SILMOLD_PT_processing, "bl_options", frozenset())
+        coloring_options = getattr(SILMOLD_PT_coloring, "bl_options", frozenset())
 
         assert "DEFAULT_CLOSED" not in measurement_options
         assert "DEFAULT_CLOSED" not in processing_options
+        assert "DEFAULT_CLOSED" not in coloring_options
 
     def test_neither_sub_panel_hides_itself(self) -> None:
         # AC-65 / FR-7: the panels stay visible in every mode, including edit
@@ -60,6 +76,18 @@ class TestTheSubPanelsAreOpenAndAlwaysVisible:
         # own, so the attribute exists only if the add-on declared one.
         assert not hasattr(SILMOLD_PT_measurement, "poll")
         assert not hasattr(SILMOLD_PT_processing, "poll")
+        assert not hasattr(SILMOLD_PT_coloring, "poll")
+
+
+class TestColorSimulatorLists:
+    def test_the_simulator_is_a_wide_view3d_popover(self) -> None:
+        assert SILMOLD_PT_color_simulator.bl_space_type == "VIEW_3D"
+        assert SILMOLD_PT_color_simulator.bl_region_type == "HEADER"
+        assert SILMOLD_PT_color_simulator.bl_ui_units_x >= 40
+
+    def test_profiles_and_colorants_use_native_ui_lists(self) -> None:
+        assert SILMOLD_UL_color_profiles.bl_idname == "SILMOLD_UL_color_profiles"
+        assert SILMOLD_UL_colorants.bl_idname == "SILMOLD_UL_colorants"
 
 
 class TestMixtureCalculatorPopover:
@@ -94,6 +122,12 @@ class TestPublicSurface:
     def test_the_processing_panel_keeps_its_idname(self) -> None:
         # AC-61
         assert SILMOLD_PT_processing.bl_idname == "SILMOLD_PT_processing"
+
+    def test_the_coloring_panel_keeps_its_idname(self) -> None:
+        assert SILMOLD_PT_coloring.bl_idname == "SILMOLD_PT_coloring"
+
+    def test_the_color_simulator_keeps_its_idname(self) -> None:
+        assert SILMOLD_PT_color_simulator.bl_idname == "SILMOLD_PT_color_simulator"
 
     def test_the_calculator_popover_keeps_its_idname(self) -> None:
         assert (
