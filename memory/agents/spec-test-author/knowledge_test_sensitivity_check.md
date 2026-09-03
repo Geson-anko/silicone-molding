@@ -14,7 +14,7 @@ metadata:
 **期待値を持たないテストの場合:** 「例外が出る」ことだけしか assert できないテスト（`self.report({"ERROR"})` 経路など、文言の検証が仕様で禁じられている場合）は、壊す対象の期待値定数が無いので上の手順が使えない。代わりに **そのテストだけを外して該当行が Missing に戻ることを示す**:
 
 ```bash
-uv run pytest tests/silicone_molding --cov=src/silicone_molding/operators \
+uv run pytest tests/silicone_casting --cov=src/silicone_casting/operators \
   --cov-report=term-missing -q -p no:randomly --deselect "<nodeid>"
 ```
 

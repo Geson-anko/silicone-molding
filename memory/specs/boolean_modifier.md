@@ -12,9 +12,9 @@ Blender 標準の Boolean モディファイアを、N パネルから対象・�
 ## 入力
 
 - **追加先**: Object Mode でアクティブかつ選択中のメッシュオブジェクト
-- **Operand**: `Scene.silicone_molding.boolean_operand` で指定する別の
+- **Operand**: `Scene.silicone_casting.boolean_operand` で指定する別の
   メッシュオブジェクト
-- **Solver**: `Scene.silicone_molding.boolean_solver` で選ぶ次の 3 種類
+- **Solver**: `Scene.silicone_casting.boolean_solver` で選ぶ次の 3 種類
   - `MANIFOLD`（Manifold）
   - `EXACT`（Exact、既定値）
   - `FLOAT`（Float）
@@ -26,7 +26,7 @@ Blender 標準の Boolean モディファイアを、N パネルから対象・�
 ## 振る舞い
 
 - Processing パネルの Solidify と STL Export の間に Boolean セクションを置く
-- `silicone_molding.add_boolean` を実行すると、追加先へ新しい Boolean
+- `silicone_casting.add_boolean` を実行すると、追加先へ新しい Boolean
   モディファイアを 1 つ追加する
 - 追加したモディファイアは `operand_type = "OBJECT"` とし、指定した Operand、
   Operation、Solver を設定する

@@ -13,14 +13,14 @@ ______________________________________________________________________
 | -------------- | --------------------------------------------------------- | ------------------------------------------------------------- |
 | コマンド       | `just test`                                               | `just blender-test`                                           |
 | ランタイム     | PyPI の `bpy` wheel（本物の Blender ランタイム）          | 実 Blender インストール                                       |
-| 置き場         | `tests/silicone_molding/`                                 | `tests/blender/run.py`                                        |
+| 置き場         | `tests/silicone_casting/`                                 | `tests/blender/run.py`                                        |
 | フレームワーク | pytest                                                    | **なし**（素の `assert`）                                     |
 | 何を担保するか | ジオメトリのロジック、オペレータの振る舞い、公開 API 契約 | packaging、extension のインストールと登録、実アプリ上での動作 |
 | CI             | 3 OS × bpy 5.1 / 5.2                                      | 3 OS × Blender 5.1 / latest                                   |
 
 **tier 1 が主戦場**。`bpy` wheel は fake ではなく本物のランタイムなので、`bmesh` もデータ API もシーンも実挙動で動く。速いので普段はこちらだけ回す。
 
-**tier 2 は wheel では検証できないものだけ**。zip がビルドできるか、`extension install-file` が通るか、Blender が `bl_ext.user_default.silicone_molding` として解決するか、実 Blender 上でも同じジオメトリが出るか。Blender 同梱 Python に何もインストールせずに済むよう **third-party を import しない**（pytest も使わない）。これが 3 OS で最も壊れにくい。
+**tier 2 は wheel では検証できないものだけ**。zip がビルドできるか、`extension install-file` が通るか、Blender が `bl_ext.user_default.silicone_casting` として解決するか、実 Blender 上でも同じジオメトリが出るか。Blender 同梱 Python に何もインストールせずに済むよう **third-party を import しない**（pytest も使わない）。これが 3 OS で最も壊れにくい。
 
 ______________________________________________________________________
 
@@ -94,11 +94,11 @@ ______________________________________________________________________
 
 ### 例外: 公開 API 契約テスト
 
-`bl_idname`、`Scene.silicone_molding` のプロパティ名、`blender_manifest.toml` のフィールドは、Blender の UI・キーマップ・既存 `.blend`・リリース CI が参照する契約。上記の原則の **唯一の例外** として固定する価値がある。
+`bl_idname`、`Scene.silicone_casting` のプロパティ名、`blender_manifest.toml` のフィールドは、Blender の UI・キーマップ・既存 `.blend`・リリース CI が参照する契約。上記の原則の **唯一の例外** として固定する価値がある。
 
 - `@pytest.mark.api_contract` を付ける
 - コメントで「これは契約ピンであり振る舞いテストではない」と明示する
-- 例: `tests/silicone_molding/test_manifest.py`
+- 例: `tests/silicone_casting/test_manifest.py`
 
 ______________________________________________________________________
 
@@ -110,7 +110,7 @@ tests/
 ├── _helpers.py              # bmesh の import を独占。mesh_invariants / golden 比較 / make_cube_mesh
 ├── generate_fixtures.py     # `just fixtures` の実体
 ├── fixtures/*.obj           # golden mesh
-├── silicone_molding/        # src/silicone_molding/ と 1 対 1 ミラー
+├── silicone_casting/        # src/silicone_casting/ と 1 対 1 ミラー
 └── blender/run.py           # tier 2 (pytest から --ignore されている)
 ```
 
@@ -135,7 +135,7 @@ ______________________________________________________________________
 
 ```bash
 just test                                        # tier 1 全部
-uv run pytest tests/silicone_molding/core -v     # 一部だけ
+uv run pytest tests/silicone_casting/core -v     # 一部だけ
 uv run pytest -m golden                          # golden だけ
 uv run pytest -m "not golden"                    # golden 以外
 just blender-test                                # tier 2 (build → install → 検証)

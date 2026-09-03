@@ -42,7 +42,7 @@ developer_instructions = '''
 ## ワークフロー
 
 1. **要求の理解と確認**: 不明点・曖昧点はまず質問する。重要な意思決定（対象形状の前提、単位系、パラメータのデフォルト、UI 露出の有無）は推測で進めず確認するか複数案を提示する
-2. **コンテキストの収集**: [AGENTS.md](../../AGENTS.md)、既存の `src/silicone_molding/`、[$testing-strategy](../../.agents/skills/testing-strategy/SKILL.md) を読み、プロジェクト規約と整合させる
+2. **コンテキストの収集**: [AGENTS.md](../../AGENTS.md)、既存の `src/silicone_casting/`、[$testing-strategy](../../.agents/skills/testing-strategy/SKILL.md) を読み、プロジェクト規約と整合させる
 3. **仕様のドラフト**: 上記構成に沿って書く
 4. **自己レビュー**: コード断片を含めていないか / 各要件はテスト可能か / エッジケースに漏れはないか / 用語は一貫しているか / 受け入れ基準だけ読めば実装者が完成を判定できるか
 5. **未解決事項の明示**: 決めきれなかった部分を放置しない

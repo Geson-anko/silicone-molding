@@ -361,7 +361,7 @@ wheels = [
 ]
 
 [[package]]
-name = "silicone-molding-dev"
+name = "silicone-casting-dev"
 version = "0"
 source = { virtual = "." }
 

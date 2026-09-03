@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 
-`silicone-molding` は **シリコーン造形用の樹脂型モデル（3D プリント可能）を生成する Blender アドオン**。マスターモデルから、注型・脱型できる分割型を作るまでのツール群を提供する。
+`silicone-casting` は **シリコーン造形用の樹脂型モデル（3D プリント可能）を生成する Blender アドオン**。マスターモデルから、注型・脱型できる分割型を作るまでのツール群を提供する。
 
 ## 開発原則
 
@@ -85,22 +85,22 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 
 **対応バージョン**: Blender **5.1 以上** / Python **3.13**。Blender 5.0 は Python 3.11 で、対応するとツールチェーン全体を py311 構文に落とし CI マトリクスも 2 世代に割れるため足切りした。
 
-**レイアウト**: Extension のソースルートは [src/silicone_molding/](src/silicone_molding/) で、`blender_manifest.toml` と `__init__.py` が同じ階層に並ぶ（`blender --command extension build --source-dir` がそのまま通る形）。
+**レイアウト**: Extension のソースルートは [src/silicone_casting/](src/silicone_casting/) で、`blender_manifest.toml` と `__init__.py` が同じ階層に並ぶ（`blender --command extension build --source-dir` がそのまま通る形）。
 
 | レイヤ                                        | 責務                                                                       |
 | --------------------------------------------- | -------------------------------------------------------------------------- |
-| [core/](src/silicone_molding/core/)           | メッシュ処理の本体。`bpy.ops` に依存せず、シーンも depsgraph も要求しない  |
-| [operators/](src/silicone_molding/operators/) | `core` を Blender オペレータとして公開する薄い層。入力検証と `self.report` |
-| [ui/](src/silicone_molding/ui/)               | サイドバーパネルと `Scene.silicone_molding` に載る `PropertyGroup`         |
+| [core/](src/silicone_casting/core/)           | メッシュ処理の本体。`bpy.ops` に依存せず、シーンも depsgraph も要求しない  |
+| [operators/](src/silicone_casting/operators/) | `core` を Blender オペレータとして公開する薄い層。入力検証と `self.report` |
+| [ui/](src/silicone_casting/ui/)               | サイドバーパネルと `Scene.silicone_casting` に載る `PropertyGroup`         |
 
-**サイドバーの構成**: 親パネル `SILMOLD_PT_main` は中身を持たないヘッダーで、コントロールはその下のサブパネル 3 つが持つ（`SILMOLD_PT_measurement` = Measurement、`SILMOLD_PT_coloring` = Coloring、`SILMOLD_PT_processing` = Processing。並び順は `bl_order`）。機能を足すときはどのセクションに載せるかを先に決める。
+**サイドバーの構成**: 親パネル `SILCAST_PT_main` は中身を持たないヘッダーで、コントロールはその下のサブパネル 3 つが持つ（`SILCAST_PT_measurement` = Measurement、`SILCAST_PT_coloring` = Coloring、`SILCAST_PT_processing` = Processing。並び順は `bl_order`）。機能を足すときはどのセクションに載せるかを先に決める。
 
 現状の実装は以下の 5 機能。造形機能の本体はこれから。
 
-- **Solidify**（Processing）— `silicone_molding.solidify` で選択メッシュにアドオン専用の Solidify モディファイアを付与・更新し、`silicone_molding.apply_solidify` でそのモディファイアだけをメッシュに焼き込む。パラメータは壁厚（mm 入力）、方向反転、均一な厚み
-- **体積計測**（Measurement）— `silicone_molding.measure_volume` が選択メッシュの体積をモディファイア込みのワールド実寸で合計し、mL で `Scene.silicone_molding` に保存する（ボタン押下時のスナップショット。閉じていないメッシュがあれば数値を出さずエラー）。`silicone_molding.copy_value` は渡された文字列をクリップボードへコピーするだけの汎用オペレータで、体積という概念を持たない
-- **STL 出力**（Processing）— `silicone_molding.export_stl` がアクティブオブジェクト名を既定名にして保存先選択を開き、選択物のみ・モディファイア適用・1000 倍の固定設定で STL を出力する。同じ Blender セッションでは、直前に出力したフォルダを次回の既定保存先にする
-- **Boolean**（Processing）— `silicone_molding.add_boolean` がアクティブな選択メッシュへ、指定した別メッシュを Operand とする Boolean モディファイアを追加する。Difference / Union / Intersect と Manifold / Exact / Float を選択できる
+- **Solidify**（Processing）— `silicone_casting.solidify` で選択メッシュにアドオン専用の Solidify モディファイアを付与・更新し、`silicone_casting.apply_solidify` でそのモディファイアだけをメッシュに焼き込む。パラメータは壁厚（mm 入力）、方向反転、均一な厚み
+- **体積計測**（Measurement）— `silicone_casting.measure_volume` が選択メッシュの体積をモディファイア込みのワールド実寸で合計し、mL で `Scene.silicone_casting` に保存する（ボタン押下時のスナップショット。閉じていないメッシュがあれば数値を出さずエラー）。`silicone_casting.copy_value` は渡された文字列をクリップボードへコピーするだけの汎用オペレータで、体積という概念を持たない
+- **STL 出力**（Processing）— `silicone_casting.export_stl` がアクティブオブジェクト名を既定名にして保存先選択を開き、選択物のみ・モディファイア適用・1000 倍の固定設定で STL を出力する。同じ Blender セッションでは、直前に出力したフォルダを次回の既定保存先にする
+- **Boolean**（Processing）— `silicone_casting.add_boolean` がアクティブな選択メッシュへ、指定した別メッシュを Operand とする Boolean モディファイアを追加する。Difference / Union / Intersect と Manifold / Exact / Float を選択できる
 - **混色シミュレータ**（Coloring）— 染料色を彩度100%固定のHue・Lightness、色スウォッチ付きカラーピッカー、Hex（sRGB）から入力し、染料別の校正濃度（滴/mL）を重みにした代表反射スペクトルの減法混色近似を行う。全染料による不透明化、Lightness 100%の白による自動淡色化、黒や茶色を含む他色の暗色化を反映し、名前付きプロファイルとして保存する。光学設定はTransparencyのみ。結果色とコピー可能なカラー値を常時表示し、専用マテリアルを選択メッシュへ適用できる
 
 ## ツーリング
@@ -126,7 +126,7 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 | `just type`         | 隔離環境で pyright strict                                                          |
 | `just run`          | format → test → type                                                               |
 | `just validate`     | Extension マニフェストの検証                                                       |
-| `just build`        | `dist/silicone_molding-<version>.zip` を生成                                       |
+| `just build`        | `dist/silicone_casting-<version>.zip` を生成                                       |
 | `just install`      | build して実 Blender に install（有効化まで）                                      |
 | `just dev`          | install して Blender を GUI 起動。手で機能を触るためのもの。MCP サーバーも起動する |
 | `just blender-test` | install して統合チェック（tier 2）                                                 |
@@ -138,7 +138,7 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 
 細かい制御が必要な場合の直接呼び出し:
 
-- 単一テスト: `uv run pytest tests/silicone_molding/core/test_solidify.py -v`
+- 単一テスト: `uv run pytest tests/silicone_casting/core/test_solidify.py -v`
 - キーワードフィルタ: `uv run pytest -v -k "<expr>"`
 - マーカー選択: `uv run pytest -m golden`
 - 単一の pre-commit フック: `uv run pre-commit run ruff -a`
@@ -153,13 +153,13 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 
 以下は Blender 側の UI・キーマップ・既存 `.blend` から参照されるため、実質的な公開 API として扱う。リファクタリングで勝手に変えない:
 
-- オペレータの `bl_idname`（例: `silicone_molding.solidify`）
-- `PropertyGroup` のプロパティ名と `Scene` への登録名（`Scene.silicone_molding`）
+- オペレータの `bl_idname`（例: `silicone_casting.solidify`）
+- `PropertyGroup` のプロパティ名と `Scene` への登録名（`Scene.silicone_casting`）
 - パネルの `bl_idname` / `bl_category`
 
 ### private モジュール規約
 
-`src/silicone_molding/` 配下のモジュールは **テストの有無** で `_` prefix の有無を決める:
+`src/silicone_casting/` 配下のモジュールは **テストの有無** で `_` prefix の有無を決める:
 
 - テストを書かない（真に private な実装）→ ファイル名に `_` prefix を付ける
 - テストを書く / 書かれている → `_` prefix を **付けない**
@@ -173,7 +173,7 @@ LLM コーディングで陥りがちなミスを減らすための行動指針�
 
 ### バージョンの単一の真実
 
-`src/silicone_molding/blender_manifest.toml` の `version` が真値。`pyproject.toml` は `package = false` の開発ツール設定専用でバージョンを持たない。リリース CI がタグと manifest の一致を検証する。
+`src/silicone_casting/blender_manifest.toml` の `version` が真値。`pyproject.toml` は `package = false` の開発ツール設定専用でバージョンを持たない。リリース CI がタグと manifest の一致を検証する。
 
 ## 索引
 

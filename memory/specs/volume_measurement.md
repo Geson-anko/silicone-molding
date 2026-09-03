@@ -13,12 +13,12 @@ ______________________________________________________________________
 
 本仕様は 2 つの変更を 1 つの単位として扱う。両者は「サイドバーの構造」を共有するため分離できない。
 
-1. サイドバー「Silicone Molding」タブを **親パネル + 折りたたみ可能なサブパネル 2 つ** に再編する
+1. サイドバー「Silicone Casting」タブを **親パネル + 折りたたみ可能なサブパネル 2 つ** に再編する
 2. サブパネル「Measurement」に新機能 **体積計測** を載せる
 
 ### 1.1 解決する問題
 
-**(a) サイドバーが平坦である。** 現状 `SILMOLD_PT_main` に肉厚・方向反転・Solidify・Apply が一列に並んでいる。今後 分割面生成・湯口・エア抜き・インターロックといった機能が積まれると、関心の異なるコントロールが 1 枚のパネルに混在して探せなくなる。機能が 2 つに増えるこの時点でセクションを切り、以後の機能追加が「どのセクションに入るか」を先に決められる状態にする。
+**(a) サイドバーが平坦である。** 現状 `SILCAST_PT_main` に肉厚・方向反転・Solidify・Apply が一列に並んでいる。今後 分割面生成・湯口・エア抜き・インターロックといった機能が積まれると、関心の異なるコントロールが 1 枚のパネルに混在して探せなくなる。機能が 2 つに増えるこの時点でセクションを切り、以後の機能追加が「どのセクションに入るか」を先に決められる状態にする。
 
 **(b) 注型量が分からない。** シリコーンや樹脂を計量するとき、ユーザーは「この型に何 mL 入るか」「この壁で樹脂が何 mL 必要か」を知りたい。現状これを得るには Blender 標準の統計オーバーレイ（頂点数・面数しか出ない）では足りず、サードパーティのアドオンか手計算に頼っている。造形の現場で使う単位は **mL（= cm³）** であり、計量カップとシリコーンの缶に書かれた単位と一致する。
 
@@ -34,7 +34,7 @@ ______________________________________________________________________
 - G-4. 体積が定義できない選択（境界辺・非多様体辺を持つメッシュを含む）では、数値を出さず **原因のオブジェクト名を含むエラー** を報告する
 - G-5. 表示された数値を 1 クリックでクリップボードへコピーでき、スプレッドシートにそのまま貼れる
 - G-6. サイドバーが「Measurement（計測）」「Processing（加工）」の 2 セクションに分かれ、それぞれ独立に折りたためる
-- G-7. 既存の公開 API（`SILMOLD_PT_main` の `bl_idname` / `bl_category`、オペレータの `bl_idname`、`Scene.silicone_molding` の既存プロパティ名）を一切変えない
+- G-7. 既存の公開 API（`SILCAST_PT_main` の `bl_idname` / `bl_category`、オペレータの `bl_idname`、`Scene.silicone_casting` の既存プロパティ名）を一切変えない
 - G-8. 計測は **明示的な操作**（ボタン押下）でのみ走る。ビューポートの再描画が計測コストを払うことはない
 
 ### 1.4 非ゴール (out of scope)
@@ -76,7 +76,7 @@ ______________________________________________________________________
 | **スナップショット** | 計測ボタンを押した瞬間の結果。以後シーンが変わっても自動更新されない（§8.5 L-1） |
 | **未計測 (not measured)** | 保存された結果が無い状態。`.blend` を新規に開いた直後、および計測が失敗した直後 |
 | **サブパネル** | `bl_parent_id` に親パネルの `bl_idname` を指定したパネル。親の中に折りたたみ可能なセクションとして描画される |
-| **固定名モディファイア** | Solidify 仕様で定義した `"Silicone Molding Solidify"`。本仕様は名前を参照しない（すべてのモディファイアの評価結果を測る） |
+| **固定名モディファイア** | Solidify 仕様で定義した `"Silicone Casting Solidify"`。本仕様は名前を参照しない（すべてのモディファイアの評価結果を測る） |
 
 以下の造形ドメイン用語は本機能では扱わない（後続機能の語彙）: 分割面、パーティングライン、抜き勾配、湯口、エア抜き、インターロック、収縮代。
 
@@ -86,21 +86,21 @@ ______________________________________________________________________
 
 ### 3.1 機能要件 — パネル構造
 
-- FR-1. `SILMOLD_PT_main` を親パネルとして残し、その `bl_idname`（`"SILMOLD_PT_main"`）と `bl_category`（`"Silicone Molding"`）を変更してはならない (MUST NOT)。既存ユーザーの UI 状態・キーマップから参照される公開 API である
-- FR-2. `SILMOLD_PT_main.draw` は layout に何も追加してはならない (MUST NOT)。ヘッダーのみのパネルとする。`draw` メソッド自体は残す (MUST) — Blender は `draw` を持たないパネルの登録を拒否するため
-- FR-3. 子パネルを 2 つ新設する (MUST)。`bl_parent_id` は両方 `"SILMOLD_PT_main"` とする
+- FR-1. `SILCAST_PT_main` を親パネルとして残し、その `bl_idname`（`"SILCAST_PT_main"`）と `bl_category`（`"Silicone Casting"`）を変更してはならない (MUST NOT)。既存ユーザーの UI 状態・キーマップから参照される公開 API である
+- FR-2. `SILCAST_PT_main.draw` は layout に何も追加してはならない (MUST NOT)。ヘッダーのみのパネルとする。`draw` メソッド自体は残す (MUST) — Blender は `draw` を持たないパネルの登録を拒否するため
+- FR-3. 子パネルを 2 つ新設する (MUST)。`bl_parent_id` は両方 `"SILCAST_PT_main"` とする
 
 | クラス名 | `bl_idname` | `bl_label` | 内容 |
 | --- | --- | --- | --- |
-| `SILMOLD_PT_measurement` | `SILMOLD_PT_measurement` | `Measurement` | 計測ボタンと結果行（新規） |
-| `SILMOLD_PT_processing` | `SILMOLD_PT_processing` | `Processing` | 壁厚 / 方向反転 / Solidify / Apply（既存からの移設） |
+| `SILCAST_PT_measurement` | `SILCAST_PT_measurement` | `Measurement` | 計測ボタンと結果行（新規） |
+| `SILCAST_PT_processing` | `SILCAST_PT_processing` | `Processing` | 壁厚 / 方向反転 / Solidify / Apply（既存からの移設） |
 
-- FR-4. サブパネルの表示順は `bl_order` で明示する (MUST)。`SILMOLD_PT_measurement.bl_order = 0`、`SILMOLD_PT_processing.bl_order = 1`。登録順（`_CLASSES` のタプル順）に依存させてはならない (MUST NOT) — 順序が `_CLASSES` の並べ替えで暗黙に壊れるのを防ぐため
+- FR-4. サブパネルの表示順は `bl_order` で明示する (MUST)。`SILCAST_PT_measurement.bl_order = 0`、`SILCAST_PT_processing.bl_order = 1`。登録順（`_CLASSES` のタプル順）に依存させてはならない (MUST NOT) — 順序が `_CLASSES` の並べ替えで暗黙に壊れるのを防ぐため
 - FR-5. サブパネルには `bl_space_type` と `bl_region_type` を明示する (MUST)。`bl_category` は定義しない (SHOULD NOT) — 子パネルは親のカテゴリに従うため、書くと真実の出所が 2 つになる
 - FR-6. サブパネルの `bl_options` に `"DEFAULT_CLOSED"` を含めない (MUST NOT)。2 セクションとも既定で開いた状態にする
 - FR-7. サブパネルに `poll` を定義してはならない (MUST NOT)。編集モードでもパネルは表示され、ボタンは各オペレータの `poll` によりグレーアウトする
-- FR-8. 登録順は「親パネル → 子パネル」でなければならない (MUST)。逆順だと Blender が `RuntimeError`（`parent 'SILMOLD_PT_main' ... not found`）を送出し、アドオン全体が有効化できなくなる
-- FR-9. 既存のプロパティ行 2 つとボタン 2 つは、内容・順序・アイコンを変えずに `SILMOLD_PT_processing.draw` へ移設する (MUST)。この移設で Solidify 機能の振る舞いが変わってはならない
+- FR-8. 登録順は「親パネル → 子パネル」でなければならない (MUST)。逆順だと Blender が `RuntimeError`（`parent 'SILCAST_PT_main' ... not found`）を送出し、アドオン全体が有効化できなくなる
+- FR-9. 既存のプロパティ行 2 つとボタン 2 つは、内容・順序・アイコンを変えずに `SILCAST_PT_processing.draw` へ移設する (MUST)。この移設で Solidify 機能の振る舞いが変わってはならない
 
 ### 3.2 機能要件 — 測定対象と評価方法
 
@@ -123,7 +123,7 @@ ______________________________________________________________________
 
 - FR-24. 計測は専用のオペレータ（ボタン）で起動する (MUST)。ボタン 1 回の押下で 1 回だけ計測する
 - FR-25. `Panel.draw` の中で depsgraph 評価・`to_mesh()`・体積計算のいずれも行ってはならない (MUST NOT)。`draw` は保存された結果を読んで整形するだけとする (MUST)
-- FR-26. 結果は `Scene.silicone_molding` に **2 つのプロパティ** として保存する (MUST)
+- FR-26. 結果は `Scene.silicone_casting` に **2 つのプロパティ** として保存する (MUST)
 
 | プロパティ名 | 型 | 意味 |
 | --- | --- | --- |
@@ -168,7 +168,7 @@ ______________________________________________________________________
 - NFR-1. `core/` 配下は `bpy.ops` に依存してはならない (MUST NOT)。`core/units.py` はさらに `bpy` 自体にも依存しない
 - NFR-2. Blender 5.1 で利用可能な API のみを使う (MUST)。5.2 で追加された API は使ってはならない。本仕様が用いる `Object.to_mesh` / `to_mesh_clear` / `BMesh.calc_volume` / `Panel.bl_parent_id` / `Panel.bl_order` / `WindowManager.clipboard` はいずれも 5.1 以前から存在する
 - NFR-3. `pyright` strict を通ること (MUST)。§5.11 に、想定コード形状が strict で 0 エラーになることを実測で確認した記録がある
-- NFR-4. `bl_idname`、`Scene.silicone_molding` 配下のプロパティ名、パネルの `bl_idname` / `bl_category` は公開 API として扱う (MUST)。本仕様で新設する `volume_ml` / `volume_measured` / `SILMOLD_PT_measurement` / `SILMOLD_PT_processing` / 2 つの `bl_idname` はいずれも決定後は互換性を意識する。パネルの `bl_idname` を含める理由は、開閉状態が `.blend` の画面データにその id で保存されるため
+- NFR-4. `bl_idname`、`Scene.silicone_casting` 配下のプロパティ名、パネルの `bl_idname` / `bl_category` は公開 API として扱う (MUST)。本仕様で新設する `volume_ml` / `volume_measured` / `SILCAST_PT_measurement` / `SILCAST_PT_processing` / 2 つの `bl_idname` はいずれも決定後は互換性を意識する。パネルの `bl_idname` を含める理由は、開閉状態が `.blend` の画面データにその id で保存されるため
 - NFR-5. 性能要件は設けない（該当なし）。計算量は「選択メッシュの評価後の辺数と面数の合計」に比例するが、**ボタン押下 1 回あたり 1 度しか走らない**。ビューポートの再描画は保存済みの float を読むだけで、計測コストを払わない（FR-25）。この性質があるため、キャッシュ機構を投機的に実装する必要がない
 - NFR-6. 体積の数値精度: Blender のメッシュ座標は float32 であり、体積は座標誤差が 3 乗で効くため解析値と相対 1e-5 程度ずれる。テストの許容誤差は §9 の各項目で個別に指定する。`Scene` に保存する `FloatProperty` は Blender 内部で float32 に丸められるため、これも許容誤差の見積もりに織り込む
 
@@ -210,13 +210,13 @@ ______________________________________________________________________
 
 **表示（リドローごと）**
 
-7. `SILMOLD_PT_measurement.draw` が計測ボタンを描画する
+7. `SILCAST_PT_measurement.draw` が計測ボタンを描画する
 8. `volume_measured` が偽なら、結果行の右に `--` のラベルを置いて終わる
 9. 真なら `format_ml(volume_ml)` で文字列を 1 つ作り、それを `layout.operator(..., text=..., emboss=False)` のテキストと `OperatorProperties.value` の両方に渡す
 
 **コピー（値のクリック時）**
 
-10. `SILMOLD_OT_copy_value.execute` が `context.window_manager.clipboard` に文字列を代入し、`INFO` を報告する
+10. `SILCAST_OT_copy_value.execute` が `context.window_manager.clipboard` に文字列を代入し、`INFO` を報告する
 
 ### 4.3 モジュール境界（並列実装のための分担）
 
@@ -224,13 +224,13 @@ ______________________________________________________________________
 
 | | モジュール A（core 層） | モジュール B（Blender 統合層） |
 | --- | --- | --- |
-| 実装 | `src/silicone_molding/core/units.py`<br>`src/silicone_molding/core/volume.py`<br>`src/silicone_molding/core/__init__.py` | `src/silicone_molding/operators/measure_volume.py`<br>`src/silicone_molding/operators/copy_value.py`<br>`src/silicone_molding/operators/__init__.py`<br>`src/silicone_molding/ui/properties.py`<br>`src/silicone_molding/ui/panel.py`<br>`src/silicone_molding/ui/__init__.py`<br>`src/silicone_molding/__init__.py` |
-| テスト | `tests/silicone_molding/core/test_units.py`（追記）<br>`tests/silicone_molding/core/test_volume.py`（新規） | `tests/silicone_molding/operators/test_measure_volume.py`（新規）<br>`tests/silicone_molding/operators/test_copy_value.py`（新規）<br>`tests/silicone_molding/ui/test_panel.py`（新規）<br>`tests/silicone_molding/test_register.py`（追記）<br>`tests/blender/run.py`（追記） |
+| 実装 | `src/silicone_casting/core/units.py`<br>`src/silicone_casting/core/volume.py`<br>`src/silicone_casting/core/__init__.py` | `src/silicone_casting/operators/measure_volume.py`<br>`src/silicone_casting/operators/copy_value.py`<br>`src/silicone_casting/operators/__init__.py`<br>`src/silicone_casting/ui/properties.py`<br>`src/silicone_casting/ui/panel.py`<br>`src/silicone_casting/ui/__init__.py`<br>`src/silicone_casting/__init__.py` |
+| テスト | `tests/silicone_casting/core/test_units.py`（追記）<br>`tests/silicone_casting/core/test_volume.py`（新規） | `tests/silicone_casting/operators/test_measure_volume.py`（新規）<br>`tests/silicone_casting/operators/test_copy_value.py`（新規）<br>`tests/silicone_casting/ui/test_panel.py`（新規）<br>`tests/silicone_casting/test_register.py`（追記）<br>`tests/blender/run.py`（追記） |
 | 依存方向 | B に依存しない | A の §5.1 / §5.2 のシグネチャにのみ依存 |
 
 - 契約は本仕様書の §5 が唯一の真実とする。A と B は互いの実装を読まずに、§5 だけを見て書ける状態でなければならない
 - B は A の完成を待たずに書き始められるが、B のテストは A がマージされるまで通らない（import 不能）。§10 の PR 分割を参照
-- `tests/silicone_molding/ui/` は新規ディレクトリになる。プロジェクト規約どおり `__init__.py` は置かない
+- `tests/silicone_casting/ui/` は新規ディレクトリになる。プロジェクト規約どおり `__init__.py` は置かない
 - テストモジュールの basename は `tests/` 全体で一意でなければならない（pytest の prepend import mode）。`test_volume.py`（core）と `test_measure_volume.py`（operators）は別名なので衝突しない。`operators/measure_volume.py` という名前を選んだのは、`core/volume.py` と同名を避けてこの制約を回避するためでもある
 - 共有 fixture が必要になった場合、`tests/conftest.py` を編集するのは **A** とする（B は編集しない）。ただし本仕様の範囲では既存の `cube_object` / `make_object` / `empty_mesh` で足り、追加は不要と見込む
 
@@ -382,11 +382,11 @@ PyPI の `bpy` wheel は `bmesh` を bpy の C 初期化時に builtin モジュ
 
 `operators/solidify.py` の `_selected_meshes` を import してはならない (MUST NOT) — private 関数であり、`total_volume` が自前でメッシュを選別するため不要である。`context.selected_objects or ()` をそのまま `total_volume` に渡す (MUST)。`or ()` が必要な理由（スタブ上 optional であること）は既存コードと同じ形でコメントする。
 
-**`SILMOLD_OT_measure_volume`**
+**`SILCAST_OT_measure_volume`**
 
 | 項目 | 値 |
 | --- | --- |
-| `bl_idname` | `silicone_molding.measure_volume` |
+| `bl_idname` | `silicone_casting.measure_volume` |
 | `bl_label` | `Measure Volume` |
 | `bl_description` | ツールチップ。推奨文言「Measure the total volume of the selected meshes」 |
 | `bl_options` | `{"REGISTER", "UNDO"}` |
@@ -395,7 +395,7 @@ PyPI の `bpy` wheel は `bmesh` を bpy の C 初期化時に builtin モジュ
 - `poll`: `context.selected_objects` に `type == "MESH"` のオブジェクトが 1 つ以上あるとき真。`context.mode` を見てはならない (MUST NOT、FR-31)
 - `execute`
   1. `summary = total_volume(context.selected_objects or (), context.evaluated_depsgraph_get())`
-  2. `props = context.scene.silicone_molding`
+  2. `props = context.scene.silicone_casting`
   3. `summary.non_watertight_names` が空でなければ
      - `props.volume_measured = False` にする（FR-33）
      - 先頭 3 件までの名前と、残りがあればその件数を含むメッセージを `self.report({"ERROR"}, ...)` で報告する
@@ -424,11 +424,11 @@ PyPI の `bpy` wheel は `bmesh` を bpy の C 初期化時に builtin モジュ
 
 ### 5.5 `operators/copy_value.py`（新規）
 
-**`SILMOLD_OT_copy_value`**
+**`SILCAST_OT_copy_value`**
 
 | 項目 | 値 |
 | --- | --- |
-| `bl_idname` | `silicone_molding.copy_value` |
+| `bl_idname` | `silicone_casting.copy_value` |
 | `bl_label` | `Copy Value` |
 | `bl_description` | ツールチップ。推奨文言「Copy this value to the clipboard」 |
 | `bl_options` | `{"REGISTER", "INTERNAL"}` |
@@ -452,11 +452,11 @@ PyPI の `bpy` wheel は `bmesh` を bpy の C 初期化時に builtin モジュ
 
 ### 5.6 `operators/__init__.py`（変更）
 
-`SILMOLD_OT_copy_value` と `SILMOLD_OT_measure_volume` を再エクスポートし、`__all__` に追加する (MUST)。
+`SILCAST_OT_copy_value` と `SILCAST_OT_measure_volume` を再エクスポートし、`__all__` に追加する (MUST)。
 
 ### 5.7 `ui/properties.py`（変更）
 
-`SiliconeMoldingProperties` に 2 つのプロパティを追加する。既存の 2 つは変更しない (MUST NOT)。
+`SiliconeCastingProperties` に 2 つのプロパティを追加する。既存の 2 つは変更しない (MUST NOT)。
 
 | プロパティ名 | 型 | 引数 |
 | --- | --- | --- |
@@ -474,7 +474,7 @@ PyPI の `bpy` wheel は `bmesh` を bpy の C 初期化時に builtin モジュ
 
 3 つのパネルクラスを 1 ファイルに置く (MUST)。ファイル分割はしない — いずれも小さく、サブパネルは親と一体で読むべきものである。
 
-**`SILMOLD_PT_main`（変更）**
+**`SILCAST_PT_main`（変更）**
 
 | 項目 | 変更前 | 変更後 |
 | --- | --- | --- |
@@ -483,42 +483,42 @@ PyPI の `bpy` wheel は `bmesh` を bpy の C 初期化時に builtin モジュ
 
 `draw` の本体は docstring 1 つで足りる（`pass` は不要）。「ヘッダーのみのパネルであり、コントロールはサブパネルが持つ」ことをその docstring に書く (MUST)。既存の `assert layout is not None` は不要になるので消す (MUST) — 自分の変更で不要になったコードは消す、という開発原則に従う。
 
-**`SILMOLD_PT_measurement`（新規）**
+**`SILCAST_PT_measurement`（新規）**
 
 | 項目 | 値 |
 | --- | --- |
 | `bl_label` | `Measurement` |
-| `bl_idname` | `SILMOLD_PT_measurement` |
+| `bl_idname` | `SILCAST_PT_measurement` |
 | `bl_space_type` / `bl_region_type` | `VIEW_3D` / `UI` |
-| `bl_parent_id` | `SILMOLD_PT_main` |
+| `bl_parent_id` | `SILCAST_PT_main` |
 | `bl_order` | `0` |
 
 `draw` の手順:
 
 1. `layout` を取り出し、既存パネルと同じ理由コメント付きで `assert layout is not None` する
-2. `props = context.scene.silicone_molding`
-3. `SILMOLD_OT_measure_volume` のボタンを 1 行に描画する。アイコンを付けるかは実装者の裁量とする (MAY)（`pyright` が `IconItems` の Literal で綴りを検証する）
+2. `props = context.scene.silicone_casting`
+3. `SILCAST_OT_measure_volume` のボタンを 1 行に描画する。アイコンを付けるかは実装者の裁量とする (MAY)（`pyright` が `IconItems` の Literal で綴りを検証する）
 4. 2 列のレイアウト（`layout.split`）を作り、左に `Volume (mL)` のラベルを置く
 5. `props.volume_measured` が偽なら、右に無効値の固定文字列（`--`）のラベルを置いて `return` する
 6. 真なら `text = format_ml(props.volume_ml)` を 1 度だけ評価する
-7. 右に `layout.operator(SILMOLD_OT_copy_value.bl_idname, text=text, emboss=False)` を置き、戻り値の `value` に **同じ** `text` を代入する
+7. 右に `layout.operator(SILCAST_OT_copy_value.bl_idname, text=text, emboss=False)` を置き、戻り値の `value` に **同じ** `text` を代入する
 
 - `draw` の中で `context.evaluated_depsgraph_get()`、`Object.to_mesh()`、`total_volume`、`world_volume`、`cubic_units_to_ml` のいずれも呼んではならない (MUST NOT、FR-25)。`draw` が `core` から使うのは `format_ml` だけである
 - `--` と `Volume (mL)` はモジュールレベルの `Final` 定数として名前を付ける (SHOULD)
 - 未計測の表示に `--` を採る理由: 結果行のレイアウト（左ラベル + 右の値）を計測前後で同じに保てる。`Not measured` のような文にすると値の列だけが伸び、押す前と後でパネルの見た目が変わる。ボタンがすぐ上にあるので「まだ押していない」ことは文脈から明らかである
 - 左ラベルの表記は `Volume (mL)` とする (SHOULD)。単位記号は SI の慣行に従い `mL` と綴る (MUST) — リットルの記号は大文字 `L` であり、`ml` と綴ると別記法になる。`mL` は ASCII だけで書けるため、`cm³` のときにあった「Unicode の上付き 3 を使うか `cm3` と書くか」という選択は生じない
 
-**`SILMOLD_PT_processing`（新規）**
+**`SILCAST_PT_processing`（新規）**
 
 | 項目 | 値 |
 | --- | --- |
 | `bl_label` | `Processing` |
-| `bl_idname` | `SILMOLD_PT_processing` |
+| `bl_idname` | `SILCAST_PT_processing` |
 | `bl_space_type` / `bl_region_type` | `VIEW_3D` / `UI` |
-| `bl_parent_id` | `SILMOLD_PT_main` |
+| `bl_parent_id` | `SILCAST_PT_main` |
 | `bl_order` | `1` |
 
-`draw` は、現在の `SILMOLD_PT_main.draw` の中身をそのまま持つ (MUST)。プロパティ行 2 つ → Solidify ボタン（アイコン `MOD_SOLIDIFY`）→ Apply ボタンの順序とアイコンを変えてはならない (MUST NOT)。
+`draw` は、現在の `SILCAST_PT_main.draw` の中身をそのまま持つ (MUST)。プロパティ行 2 つ → Solidify ボタン（アイコン `MOD_SOLIDIFY`）→ Apply ボタンの順序とアイコンを変えてはならない (MUST NOT)。
 
 **実装で採用された裁量の記録（2026-08-15）**
 
@@ -529,25 +529,25 @@ PyPI の `bpy` wheel は `bmesh` を bpy の C 初期化時に builtin モジュ
 | 計測ボタンのアイコン | `DRIVER_DISTANCE` |
 | 結果行のレイアウト | `layout.split(factor=0.5)` |
 | 左ラベルの表記 | `Volume (mL)`（2026-08-16 の単位表記変更まではこの行が `Volume (cm3)` だった。§13.3） |
-| サブパネルの `bl_parent_id` | リテラルではなく `SILMOLD_PT_main.bl_idname` を参照（値は同一なので AC-62 を満たす） |
+| サブパネルの `bl_parent_id` | リテラルではなく `SILCAST_PT_main.bl_idname` を参照（値は同一なので AC-62 を満たす） |
 | 定数名 | `_VOLUME_LABEL` / `_NOT_MEASURED` / `_MAX_REPORTED_NAMES`（いずれも private） |
 
 ### 5.9 `ui/__init__.py`（変更）
 
-`SILMOLD_PT_measurement` と `SILMOLD_PT_processing` を再エクスポートし、`__all__` に追加する (MUST)。
+`SILCAST_PT_measurement` と `SILCAST_PT_processing` を再エクスポートし、`__all__` に追加する (MUST)。
 
-### 5.10 `src/silicone_molding/__init__.py`（変更）
+### 5.10 `src/silicone_casting/__init__.py`（変更）
 
 `_CLASSES` を以下の順序にする (MUST)。
 
-1. `SiliconeMoldingProperties`
-2. `SILMOLD_OT_solidify`
-3. `SILMOLD_OT_apply_solidify`
-4. `SILMOLD_OT_measure_volume`
-5. `SILMOLD_OT_copy_value`
-6. `SILMOLD_PT_main`
-7. `SILMOLD_PT_measurement`
-8. `SILMOLD_PT_processing`
+1. `SiliconeCastingProperties`
+2. `SILCAST_OT_solidify`
+3. `SILCAST_OT_apply_solidify`
+4. `SILCAST_OT_measure_volume`
+5. `SILCAST_OT_copy_value`
+6. `SILCAST_PT_main`
+7. `SILCAST_PT_measurement`
+8. `SILCAST_PT_processing`
 
 - 6 が 7・8 より前であることは **必須** (MUST)。Blender はサブパネルの登録時に `bl_parent_id` を解決するため、親が未登録だと `RuntimeError` になり `register()` 全体が失敗する（実測でメッセージまで確認済み: `Registering panel class: parent 'X' for 'Y' not found`）
 - 現在この `_CLASSES` には「Order within the tuple is cosmetic」というコメントが付いている。本変更で順序が意味を持つようになるため、このコメントを訂正する (MUST) — 誤った不変条件を残すと、次の実装者が安全に並べ替えられると誤解する
@@ -594,8 +594,8 @@ ______________________________________________________________________
 
 | 名前 | 保持場所 | 単位 | 既定 | 読み / 書き |
 | --- | --- | --- | --- | --- |
-| `volume_ml` | `Scene.silicone_molding` | mL | 0.0 | 計測オペレータが書き、パネルが読む |
-| `volume_measured` | `Scene.silicone_molding` | — | `False` | 計測オペレータが書き、パネルが読む |
+| `volume_ml` | `Scene.silicone_casting` | mL | 0.0 | 計測オペレータが書き、パネルが読む |
+| `volume_measured` | `Scene.silicone_casting` | — | `False` | 計測オペレータが書き、パネルが読む |
 | `scale_length` | `Scene.unit_settings` | m / BU | 1.0 | 計測オペレータが読む |
 | `matrix_world` | 各 `Object` | — | — | `world_volume` が読む |
 | 選択 | `Context.selected_objects` | — | — | `poll` と `execute` が読む |
@@ -712,7 +712,7 @@ ______________________________________________________________________
 
 ### S-11: セクションを折りたたむ
 
-- **Given** サイドバーに `Silicone Molding` パネルがあり、その中に Measurement と Processing が上から順に並んでいる
+- **Given** サイドバーに `Silicone Casting` パネルがあり、その中に Measurement と Processing が上から順に並んでいる
 - **When** ユーザーが Measurement の三角形をクリックして折りたたむ
 - **Then** 計測ボタンと結果行が隠れる
 - **And** Processing のコントロール（壁厚・方向反転・Solidify・Apply）は従来どおり機能する
@@ -733,7 +733,7 @@ ______________________________________________________________________
 | アクティブオブジェクトが選択に含まれない | 影響しない。本機能はアクティブオブジェクトを参照しない |
 | ビューポートで非表示のオブジェクト | `context.selected_objects` に現れないため、そもそも対象にならない（§5.11 で実測確認） |
 | 編集モード中 | ボタンは押せ、編集中のメッシュの評価結果を測る。オブジェクトモードと同じ値になる（§5.11 で実測確認） |
-| ライブラリリンクされたオブジェクト | ジオメトリは読み取りのみなので問題にならない。書き込むのは自シーンの `Scene.silicone_molding` だけである |
+| ライブラリリンクされたオブジェクト | ジオメトリは読み取りのみなので問題にならない。書き込むのは自シーンの `Scene.silicone_casting` だけである |
 | 計測後に選択を変える | 表示は変わらない。次に押したときの対象だけが変わる（S-6・S-10） |
 
 ### 8.2 ジオメトリの退化・破綻
@@ -771,11 +771,11 @@ ______________________________________________________________________
 | --- | --- |
 | 同じ選択で連続 2 回押す | 冪等。2 回目も同じ値が保存される（シーンが変わっていない限り） |
 | 未計測の状態でパネルを見る | 結果行は `--`。コピーボタンは描画されない（FR-45） |
-| 未計測の状態で `bpy.ops.silicone_molding.copy_value` を直接呼ぶ | 通常操作では到達しないが、呼べば空文字列がコピーされる。防御しない（`poll` を足してはならない） |
+| 未計測の状態で `bpy.ops.silicone_casting.copy_value` を直接呼ぶ | 通常操作では到達しないが、呼べば空文字列がコピーされる。防御しない（`poll` を足してはならない） |
 | 計測が失敗した直後 | `volume_measured` が偽になり表示が `--` に戻る。`volume_ml` の値は未定義（前回値が残っていてよい。読み手が居ないため） |
 | 失敗を Ctrl+Z で戻す | `{"CANCELLED"}` はアンドゥステップを push しないため、失敗直前の値には単独では戻せない。もう一度測り直すのが正しい操作（§5.4 の注記） |
 | `.blend` を保存して開き直す | `volume_ml` と `volume_measured` は保存されるため、前回の結果が表示される。シーンが変わっていなければ正しい値である（§11 OQ-2） |
-| 別シーンに切り替える | `Scene.silicone_molding` はシーン単位なので、シーンごとに独立した結果を持つ。これは望ましい振る舞いである |
+| 別シーンに切り替える | `Scene.silicone_casting` はシーン単位なので、シーンごとに独立した結果を持つ。これは望ましい振る舞いである |
 | アンドゥ後の表示 | Blender がシーンデータを巻き戻すので、結果行も自動的に前の値に戻る（S-9） |
 
 ### 8.5 既知の限界事項
@@ -847,11 +847,11 @@ ______________________________________________________________________
 
 **ここが今回いちばん重要な階層である。** 従来「`draw()` の目視レビューでしか確認できない」としていた計測ロジックは、オペレータを呼んで `Scene` プロパティを読むことで自動検証できる。
 
-- [ ] AC-31. 選択が 0 個のとき `SILMOLD_OT_measure_volume.poll` が偽（fixture で先に全 deselect する）
+- [ ] AC-31. 選択が 0 個のとき `SILCAST_OT_measure_volume.poll` が偽（fixture で先に全 deselect する）
 - [ ] AC-32. カメラのみを選択したとき `poll` が偽
 - [ ] AC-33. メッシュを選択したとき `poll` が真
 - [ ] AC-34. 編集モードでメッシュを選択しているとき `poll` が真（FR-31。モード条件を付けていないことの確認）
-- [ ] AC-35. 登録直後の `Scene.silicone_molding` で `volume_measured` が偽（既定値の意味的確認）
+- [ ] AC-35. 登録直後の `Scene.silicone_casting` で `volume_measured` が偽（既定値の意味的確認）
 - [ ] AC-36. 一辺 0.02 BU の立方体 1 つを選択して実行すると `{"FINISHED"}` を返し、`volume_measured` が真、`format_ml(volume_ml) == "8.00"`
 - [ ] AC-37. 同じ立方体 2 つを選択して実行すると `format_ml(volume_ml) == "16.00"`
 - [ ] AC-38. メッシュ 2 つと非メッシュ 1 つを選択して実行すると、非メッシュが無いときと同じ値になる（黙ってスキップすることの確認）
@@ -874,31 +874,31 @@ ______________________________________________________________________
 - `{"CANCELLED"}` を返す設計（FR-32）自体は正しく、変更しない。GUI では赤いステータス表示になるのが望ましい振る舞いであり、`RuntimeError` は「`bpy.ops` から呼んだ場合の現れ方」に過ぎない
 - 対比: `WARNING` レベルの `report` では例外が送出されない。既存の `apply_solidify` のテストが `{"CANCELLED"}` を assert できているのはこのためである（solidify 仕様 AC-36）
 - [ ] AC-46. 計測がどのオブジェクトのメッシュも変更しない（実行前後で頂点数・面数・モディファイア数が同一）
-- [ ] AC-47. `"UNDO" in SILMOLD_OT_measure_volume.bl_options`（FR-30）
-- [ ] AC-48. `SILMOLD_OT_measure_volume.bl_idname == "silicone_molding.measure_volume"`（`api_contract` マーカー。契約のピン留めである旨をコメントに明記する）
-- [ ] AC-49. `"measure_volume"` が `dir(bpy.ops.silicone_molding)` に含まれる（`hasattr` は常に真になるので使わない）
+- [ ] AC-47. `"UNDO" in SILCAST_OT_measure_volume.bl_options`（FR-30）
+- [ ] AC-48. `SILCAST_OT_measure_volume.bl_idname == "silicone_casting.measure_volume"`（`api_contract` マーカー。契約のピン留めである旨をコメントに明記する）
+- [ ] AC-49. `"measure_volume"` が `dir(bpy.ops.silicone_casting)` に含まれる（`hasattr` は常に真になるので使わない）
 - 注記: エラーメッセージの文言を検証してはならない (MUST NOT)。オブジェクト名が含まれることの確認は `pytest.raises(match=...)` 相当の部分一致すら使えない（`self.report` は例外ではない）ため、メッセージ内容は §10.4 のレビューと §9.7 の手動確認で担保する
 
 ### 9.5 コピーオペレータ（tier 1、モジュール B）
 
-- [ ] AC-50. `bpy.ops.silicone_molding.copy_value(value="8.00")` が `{"FINISHED"}` を返す
-- [ ] AC-51. `"copy_value"` が `dir(bpy.ops.silicone_molding)` に含まれる
-- [ ] AC-52. `SILMOLD_OT_copy_value.bl_idname == "silicone_molding.copy_value"`（`api_contract`）
-- [ ] AC-53. `"UNDO" not in SILMOLD_OT_copy_value.bl_options`（FR-49。シーンを変更しないオペレータがアンドゥを積まないという意味的不変条件）
-- [ ] AC-54. `SILMOLD_OT_copy_value.bl_description` が空文字列でない（FR-52）
-- [ ] AC-55. `value` プロパティが登録済みである。読み取り先は `bpy.ops.silicone_molding.copy_value.get_rna_type().properties` とする (MUST)。**`SILMOLD_OT_copy_value.bl_rna.properties` を見てはならない (MUST NOT)** — そちらは Blender 自身の `Operator` 構造体 RNA（`bl_idname` / `bl_options` / `layout` など 14 項目）に解決され、オペレータが宣言したプロパティを含まない（実測により訂正、2026-08-15）
+- [ ] AC-50. `bpy.ops.silicone_casting.copy_value(value="8.00")` が `{"FINISHED"}` を返す
+- [ ] AC-51. `"copy_value"` が `dir(bpy.ops.silicone_casting)` に含まれる
+- [ ] AC-52. `SILCAST_OT_copy_value.bl_idname == "silicone_casting.copy_value"`（`api_contract`）
+- [ ] AC-53. `"UNDO" not in SILCAST_OT_copy_value.bl_options`（FR-49。シーンを変更しないオペレータがアンドゥを積まないという意味的不変条件）
+- [ ] AC-54. `SILCAST_OT_copy_value.bl_description` が空文字列でない（FR-52）
+- [ ] AC-55. `value` プロパティが登録済みである。読み取り先は `bpy.ops.silicone_casting.copy_value.get_rna_type().properties` とする (MUST)。**`SILCAST_OT_copy_value.bl_rna.properties` を見てはならない (MUST NOT)** — そちらは Blender 自身の `Operator` 構造体 RNA（`bl_idname` / `bl_options` / `layout` など 14 項目）に解決され、オペレータが宣言したプロパティを含まない（実測により訂正、2026-08-15）
 - 注記: クリップボードの内容そのものは背景実行では検証できない（L-8）。§9.7 の手動確認で担保する。`window_manager.clipboard` を読んで assert するテストを書いてはならない (MUST NOT) — 常に空文字列が返り、何も検証しないテストになる
 
 ### 9.6 シーンプロパティとパネル構造（tier 1、モジュール B）
 
-- [ ] AC-56. `silicone_molding.register()` と `unregister()` が例外なく往復する。これがサブパネルの登録順（FR-8）の回帰検出になる。既存 `tests/silicone_molding/test_register.py` の module scope fixture が失敗すれば検出される
-- [ ] AC-57. 登録後、`Scene.silicone_molding` に `volume_ml` と `volume_measured` が存在する（`api_contract`。NFR-4）
+- [ ] AC-56. `silicone_casting.register()` と `unregister()` が例外なく往復する。これがサブパネルの登録順（FR-8）の回帰検出になる。既存 `tests/silicone_casting/test_register.py` の module scope fixture が失敗すれば検出される
+- [ ] AC-57. 登録後、`Scene.silicone_casting` に `volume_ml` と `volume_measured` が存在する（`api_contract`。NFR-4）
 - [ ] AC-58. `volume_ml` の RNA の `unit` が `"NONE"` である（FR-29。既存の `solidify_thickness_mm` に対する同種のテストと対になる）
 - [ ] AC-59. 既存の `solidify_thickness_mm` と `solidify_flip` が引き続き存在する（`api_contract`。プロパティ追加で既存を壊していないことの確認）
-- [ ] AC-60. `SILMOLD_PT_main.bl_idname == "SILMOLD_PT_main"` かつ `bl_category == "Silicone Molding"`（`api_contract`。FR-1）
-- [ ] AC-61. `SILMOLD_PT_measurement.bl_idname == "SILMOLD_PT_measurement"` および `SILMOLD_PT_processing.bl_idname == "SILMOLD_PT_processing"`（`api_contract`。パネルの開閉状態が `.blend` にこの id で保存される）
-- [ ] AC-62. 両サブパネルの `bl_parent_id` が `SILMOLD_PT_main.bl_idname` に等しい
-- [ ] AC-63. `SILMOLD_PT_measurement.bl_order < SILMOLD_PT_processing.bl_order`（順序の意味的不変条件。リテラル値は固定しない）
+- [ ] AC-60. `SILCAST_PT_main.bl_idname == "SILCAST_PT_main"` かつ `bl_category == "Silicone Casting"`（`api_contract`。FR-1）
+- [ ] AC-61. `SILCAST_PT_measurement.bl_idname == "SILCAST_PT_measurement"` および `SILCAST_PT_processing.bl_idname == "SILCAST_PT_processing"`（`api_contract`。パネルの開閉状態が `.blend` にこの id で保存される）
+- [ ] AC-62. 両サブパネルの `bl_parent_id` が `SILCAST_PT_main.bl_idname` に等しい
+- [ ] AC-63. `SILCAST_PT_measurement.bl_order < SILCAST_PT_processing.bl_order`（順序の意味的不変条件。リテラル値は固定しない）
 - [ ] AC-64. 両サブパネルの `bl_options` に `"DEFAULT_CLOSED"` が含まれない（FR-6）。`getattr(cls, "bl_options", frozenset())` で読む (MUST) — `bpy.types.Panel` は `bl_options` を既定値として持たないため、クラスが宣言しない限り `cls.bl_options` は `AttributeError` になる（実測により訂正、2026-08-15）
 - [ ] AC-65. 両サブパネルが `poll` を独自に定義していない（FR-7）。`not hasattr(cls, "poll")` で書く (MUST) — 同じ理由で、`bpy.types.Panel` は `poll` を基底クラスに持たない
 
@@ -908,17 +908,17 @@ ______________________________________________________________________
 
 既存方針どおり third-party を import しない。**インストール済み extension モジュールの import も不要** になった — 計測結果が `Scene` プロパティに載るため、すべて `bpy.ops` と RNA だけで到達できる。
 
-- [ ] AC-66. `"measure_volume"` と `"copy_value"` が `dir(bpy.ops.silicone_molding)` に含まれる（既存 `check_addon_is_enabled` のリストに追記）
-- [ ] AC-67. `Scene.silicone_molding` に `volume_ml` と `volume_measured` がある（既存 `check_scene_properties` のリストに追記）
-- [ ] AC-68. 一辺 0.02 BU の立方体 1 つを選択して `bpy.ops.silicone_molding.measure_volume()` を呼ぶと `{"FINISHED"}` が返り、`volume_measured` が真、`volume_ml` が 8.0（絶対誤差 1e-4 以内）。実 Blender のビルドでも tier 1 と同じ値が出ることの確認
+- [ ] AC-66. `"measure_volume"` と `"copy_value"` が `dir(bpy.ops.silicone_casting)` に含まれる（既存 `check_addon_is_enabled` のリストに追記）
+- [ ] AC-67. `Scene.silicone_casting` に `volume_ml` と `volume_measured` がある（既存 `check_scene_properties` のリストに追記）
+- [ ] AC-68. 一辺 0.02 BU の立方体 1 つを選択して `bpy.ops.silicone_casting.measure_volume()` を呼ぶと `{"FINISHED"}` が返り、`volume_measured` が真、`volume_ml` が 8.0（絶対誤差 1e-4 以内）。実 Blender のビルドでも tier 1 と同じ値が出ることの確認
 - [ ] AC-69. 面を 1 枚削ったメッシュを選択して呼ぶと `volume_measured` が偽になる。tier 2 は pytest を使わないため、`try` / `except RuntimeError` で囲んで「例外が出たこと」と「`volume_measured` が偽であること」の両方を assert する (MUST)。`{"CANCELLED"}` を assert してはならない (MUST NOT) — §9.4 の AC-43 〜 AC-45 と同じ理由（`ERROR` レベルの `report` が `bpy.ops` 経由で `RuntimeError` になる）
-- [ ] AC-70. `bpy.ops.silicone_molding.copy_value(value="8.00")` が `{"FINISHED"}` を返す
+- [ ] AC-70. `bpy.ops.silicone_casting.copy_value(value="8.00")` が `{"FINISHED"}` を返す
 
 ### 9.8 手動確認（実 Blender GUI、`just dev`）
 
 自動化できない項目。実施したことを PR 本文に記録する (MUST)。
 
-- [ ] AC-71. サイドバー `Silicone Molding` タブに、親パネル 1 つと `Measurement` → `Processing` の順で並ぶサブパネル 2 つが表示される
+- [ ] AC-71. サイドバー `Silicone Casting` タブに、親パネル 1 つと `Measurement` → `Processing` の順で並ぶサブパネル 2 つが表示される
 - [ ] AC-72. 各サブパネルが独立に折りたためる。折りたたみ状態が `.blend` の保存・再読込を越えて保たれる
 - [ ] AC-73. Processing の壁厚・方向反転・Solidify・Apply が従来どおり動作する（solidify 仕様 S-1 の再確認）
 - [ ] AC-74. 未計測の状態で結果行が `--` になっており、その行がクリックできない
@@ -944,8 +944,8 @@ ______________________________________________________________________
 
 | フェーズ | 内容 | 成果物 | 依存 |
 | --- | --- | --- | --- |
-| P1 | モジュール A の実装とテスト | `core/units.py`、`core/volume.py`、`core/__init__.py`、`tests/silicone_molding/core/test_units.py`（追記）、`tests/silicone_molding/core/test_volume.py` | なし |
-| P2 | モジュール B の実装とテスト | `operators/measure_volume.py`、`operators/copy_value.py`、`operators/__init__.py`、`ui/properties.py`、`ui/panel.py`、`ui/__init__.py`、`__init__.py`、`tests/silicone_molding/operators/test_measure_volume.py`、`tests/silicone_molding/operators/test_copy_value.py`、`tests/silicone_molding/ui/test_panel.py`、`tests/silicone_molding/test_register.py`（追記） | A の §5.1 / §5.2 のシグネチャ。実行時には P1 の成果物 |
+| P1 | モジュール A の実装とテスト | `core/units.py`、`core/volume.py`、`core/__init__.py`、`tests/silicone_casting/core/test_units.py`（追記）、`tests/silicone_casting/core/test_volume.py` | なし |
+| P2 | モジュール B の実装とテスト | `operators/measure_volume.py`、`operators/copy_value.py`、`operators/__init__.py`、`ui/properties.py`、`ui/panel.py`、`ui/__init__.py`、`__init__.py`、`tests/silicone_casting/operators/test_measure_volume.py`、`tests/silicone_casting/operators/test_copy_value.py`、`tests/silicone_casting/ui/test_panel.py`、`tests/silicone_casting/test_register.py`（追記） | A の §5.1 / §5.2 のシグネチャ。実行時には P1 の成果物 |
 | P3 | tier 2 の統合チェック追記 | `tests/blender/run.py` | P1・P2 |
 | P4 | 手動確認 | `just dev` で AC-71 〜 AC-82 を実施 | P1〜P3 |
 | P5 | ドキュメント | docstring、`CHANGELOG.md` の `## [Unreleased]` 更新 | P1〜P4 |
@@ -968,7 +968,7 @@ P5 では `## [Unreleased]` に「サイドバーのセクション分け」と�
 
 ### 10.3 検証手順
 
-1. P1 完了時 → `uv run pytest tests/silicone_molding/core -v` が緑（AC-1 〜 AC-30）
+1. P1 完了時 → `uv run pytest tests/silicone_casting/core -v` が緑（AC-1 〜 AC-30）
 2. P2 完了時 → `just test` が緑（AC-31 〜 AC-65 を追加）
 3. P3 完了時 → `just blender-test` が緑（AC-66 〜 AC-70）
 4. P4 → `just dev` で AC-71 〜 AC-82 を手で確認し、結果を PR 本文に書く
@@ -978,7 +978,7 @@ P5 では `## [Unreleased]` に「サイドバーのセクション分け」と�
 
 ### 10.4 コードレビューのチェックリスト（自動検証できない項目）
 
-- [ ] `SILMOLD_PT_measurement.draw` の中に `total_volume` / `world_volume` / `evaluated_depsgraph_get` / `to_mesh` / `cubic_units_to_ml` の呼び出しが **無い**（FR-25）
+- [ ] `SILCAST_PT_measurement.draw` の中に `total_volume` / `world_volume` / `evaluated_depsgraph_get` / `to_mesh` / `cubic_units_to_ml` の呼び出しが **無い**（FR-25）
 - [ ] `draw` の中で `format_ml` を呼ぶのが 1 箇所だけであり、その結果が `text=` と `OperatorProperties.value` の両方に渡っている（FR-48）
 - [ ] 計測オペレータの `execute` の中に `Depsgraph.update()` の呼び出しが無い（FR-22）
 - [ ] `execute` の中で `context.evaluated_depsgraph_get()` を呼ぶのが 1 箇所だけである（FR-23）
@@ -989,10 +989,10 @@ P5 では `## [Unreleased]` に「サイドバーのセクション分け」と�
 - [ ] エラーメッセージの名前列挙に上限があり、上限値が名前付き定数になっている（FR-34）
 - [ ] `{"CANCELLED"}` を返す前に `volume_measured = False` を書いている理由がコメントされている（§5.4）
 - [ ] `execute` に `measured_count == 0` の分岐が無い（FR-37）
-- [ ] `SILMOLD_PT_main.draw` が layout に何も追加していない（FR-2）
+- [ ] `SILCAST_PT_main.draw` が layout に何も追加していない（FR-2）
 - [ ] サブパネルに `bl_category` が定義されていない（FR-5）
 - [ ] `_CLASSES` の「順序は cosmetic」というコメントが訂正されている（§5.10）
-- [ ] `SILMOLD_PT_processing.draw` が移設前のプロパティ行・ボタン・アイコン・順序を保っている（FR-9）
+- [ ] `SILCAST_PT_processing.draw` が移設前のプロパティ行・ボタン・アイコン・順序を保っている（FR-9）
 - [ ] ハンドラ登録（`depsgraph_update_post` 等）、タイマー、キャッシュが一切入っていない（N-5・FR-36）
 - [ ] `volume_ml` に `unit=` が付いていない（FR-29）
 
@@ -1016,14 +1016,14 @@ ______________________________________________________________________
 
 今回スコープ外だが、設計上ふさぐべきでない方向:
 
-- E-1. **計測項目の追加**（表面積、寸法、重心、パーツ数）。`VolumeSummary` にフィールドを足し、`Scene` に `<項目>` と `<項目>_measured` の対を足す形で伸ばせる。`SILMOLD_OT_copy_value` を体積に紐づけない中立な名前にしてあるため、追加した行からもそのまま使える。項目が 3 つを超えたら `measured` フラグを 1 つに統合するか、計測結果を `PropertyGroup` の入れ子にまとめる整理を検討する
+- E-1. **計測項目の追加**（表面積、寸法、重心、パーツ数）。`VolumeSummary` にフィールドを足し、`Scene` に `<項目>` と `<項目>_measured` の対を足す形で伸ばせる。`SILCAST_OT_copy_value` を体積に紐づけない中立な名前にしてあるため、追加した行からもそのまま使える。項目が 3 つを超えたら `measured` フラグを 1 つに統合するか、計測結果を `PropertyGroup` の入れ子にまとめる整理を検討する
 - E-2. **オブジェクトごとの内訳表示**。`total_volume` を「1 オブジェクト 1 行の結果の並び」を返す形に広げれば対応できる。現在の `VolumeSummary` はその集約結果とみなせるので、破壊的な変更にはならない。表示側は `UIList` か折りたたみ可能な入れ子サブパネルになる
 - E-3. **比重からの質量表示**。シリコーン（約 1.1 g/cm³）やレジン（約 1.1〜1.2 g/cm³）を選ぶ列挙プロパティを足せば、mL（= cm³）からの掛け算で出せる。比重が g/cm³ で表記されるのに対し保存値が mL であっても、両者は同一量なので係数はそのままでよい。表示単位を mL 固定にしてあるため換算の起点が安定している
 - E-4. **注型量の見積もり**（型のキャビティ体積 − マスターの体積）。分割型の機能が入り「どれがキャビティか」を型側が知るようになってから
 - E-5. **スナップショットの鮮度表示**（OQ-1 の (a)(b)）。結果と一緒に計測時の対象オブジェクト数や名前を保存すれば、`draw` 側だけで「今の選択と違う」ことを示せる。ハンドラを使わずに実現できる範囲がある
 - E-6. **3 つ目以降のサブパネル**（Split / Gate / Inspect など）。`bl_order` を明示する方針にしてあるため、間に挿入するときも既存の順序を壊さずに済む
 - E-7. **サブパネルのさらなる入れ子**。Blender はサブパネルの子も描画できる。Processing が肥大化したら Solidify / Split に分けられる
-- E-8. **他の値へのコピー機能の再利用**。`SILMOLD_OT_copy_value` は文字列を受け取るだけなので、寸法・面数・見積もりコストなど、今後表示するどの値からも使える
+- E-8. **他の値へのコピー機能の再利用**。`SILCAST_OT_copy_value` は文字列を受け取るだけなので、寸法・面数・見積もりコストなど、今後表示するどの値からも使える
 
 ______________________________________________________________________
 
@@ -1037,8 +1037,8 @@ ______________________________________________________________________
 
 | 項目 | 改訂前 | 改訂後 |
 | --- | --- | --- |
-| 計測の起動 | `Panel.draw` のたびに再計算 | `SILMOLD_OT_measure_volume` の押下時に 1 回 |
-| 結果の保持 | 保持しない（毎回計算） | `Scene.silicone_molding.volume_ml` / `volume_measured` |
+| 計測の起動 | `Panel.draw` のたびに再計算 | `SILCAST_OT_measure_volume` の押下時に 1 回 |
+| 結果の保持 | 保持しない（毎回計算） | `Scene.silicone_casting.volume_ml` / `volume_measured` |
 | `draw` の責務 | depsgraph 評価・`to_mesh`・体積計算・整形 | 保存された値の整形のみ（`format_ml` だけを使う） |
 | 非 watertight の伝達 | パネル内のエラー行（最大 3 行 + 残り件数） | `self.report({"ERROR"}, ...)` + `{"CANCELLED"}`（名前は最大 3 件 + 残り件数） |
 | 結果オブジェクト方式の根拠 | 「`draw` に `try` / `except` を持ち込めないから」 | 「原因オブジェクト名を複数運べるから」（`measured_count` も同時に運べる） |
@@ -1068,7 +1068,7 @@ ______________________________________________________________________
 | # | 訂正前の記述 | 実測された事実 | 訂正後 |
 | --- | --- | --- | --- |
 | 1 | AC-43 / AC-44 / AC-69 が `{"CANCELLED"}` を assert していた | `self.report({"ERROR"}, ...)` を呼ぶと `bpy.ops` 経由では戻り値が届かず `RuntimeError` が送出される。`WARNING` では起こらない。**`poll` 失敗も同じ例外型** | `pytest.raises(RuntimeError)`（`match` なし）+ 観測可能な副作用で受ける。`execute` への到達を Arrange の `poll` assert か `volume_measured = True` の仕込みで担保することを MUST 化。tier 2 は `try` / `except RuntimeError` |
-| 2 | AC-55 が `SILMOLD_OT_copy_value.bl_rna.properties` を読んでいた | `Operator.bl_rna` は Blender 自身の `Operator` 構造体 RNA（14 項目）に解決され、宣言したプロパティを含まない。`PropertyGroup.bl_rna` は素直に返すので非対称 | `bpy.ops.silicone_molding.copy_value.get_rna_type().properties` を読む。AC-57 / AC-58 の `PropertyGroup` 側はそのままで正しい |
+| 2 | AC-55 が `SILCAST_OT_copy_value.bl_rna.properties` を読んでいた | `Operator.bl_rna` は Blender 自身の `Operator` 構造体 RNA（14 項目）に解決され、宣言したプロパティを含まない。`PropertyGroup.bl_rna` は素直に返すので非対称 | `bpy.ops.silicone_casting.copy_value.get_rna_type().properties` を読む。AC-57 / AC-58 の `PropertyGroup` 側はそのままで正しい |
 | 3 | AC-64 / AC-65 が `cls.bl_options` / `poll` の存在を前提にしていた | `bpy.types.Panel` は両者を基底に持たず、宣言しなければ `AttributeError` | `getattr(cls, "bl_options", frozenset())` と `not hasattr(cls, "poll")` |
 | 4 | （記載なし） | `obj.scale` 代入直後の `obj.matrix_world` は stale で行列式が 1.0 になる。depsgraph 取得でフラッシュされる | §5.11 に追記。期待値を `matrix_world` から導出すると両辺が stale になり「通るのに何も検証しない」テストになる、という警告を添えた |
 | 5 | §5.11 が「想定コード形状で pyright strict 0 エラー」と書いていた | 検証したのは `OperatorProperties` への **代入** 側だった。オペレータ自身の `StringProperty` を `self.value` として **読む** 側は 2 件落ちる（`_PropertyDeferred` のジェネリック引数が未解決） | §5.5 に `value = cast(str, self.value)  # pyright: ignore[reportUnknownMemberType]` の 1 行を MUST として明記。§5.11 の該当行にも但し書きを追加 |

@@ -53,7 +53,7 @@ jobs:
 
       # Re-validate the packaged archive, not just the source directory.
       - name: Validate the built archive
-        run: blender --command extension validate "dist/silicone_molding-$(just version).zip"
+        run: blender --command extension validate "dist/silicone_casting-$(just version).zip"
 
       - name: List built artifacts
         run: ls -la dist/

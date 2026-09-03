@@ -34,7 +34,7 @@
 
 ## 02. 用語定義
 
-- **Blender 公開契約**: `bl_idname`、`bl_label`、`bl_options`、パネルの `bl_idname`、`bl_parent_id`、`bl_category`、`bl_order`、RNA プロパティ名・型・既定値・範囲・更新挙動、`Scene.silicone_molding`、パッケージの `__all__`、クラス登録順を指す。
+- **Blender 公開契約**: `bl_idname`、`bl_label`、`bl_options`、パネルの `bl_idname`、`bl_parent_id`、`bl_category`、`bl_order`、RNA プロパティ名・型・既定値・範囲・更新挙動、`Scene.silicone_casting`、パッケージの `__all__`、クラス登録順を指す。
 - **互換ファサード**: 既存の import 経路から同一のクラス、関数、定数を取得できるよう再公開する薄いモジュールを指す。業務判断、ループ、分岐、Blender データ変更を持たない。
 - **RNA 列挙値**: Blender の `EnumProperty` が保存・受け渡しする文字列値を指す。Python の `Enum` インスタンスではない。
 - **Literal 型別名**: 実行時の値を変換せず、許可される文字列集合だけを静的型検査へ伝える型境界を指す。
@@ -67,7 +67,7 @@
 2. mixture の行 PropertyGroup と選択状態に関する補助型は `ui/_mixture_properties.py` が所有しなければならない（MUST）。
 3. colorant、color profile、色入力同期、派生色、プレビュー更新コールバックは `ui/_color_properties.py` が所有しなければならない（MUST）。
 4. scene 全体の PropertyGroup、各機能の scene-level RNA 宣言、オブジェクト poll、mixture と color の子 PropertyGroup の集約は `ui/_scene_properties.py` が所有しなければならない（MUST）。
-5. `ui/properties.py` は `SiliconeMoldingMixturePart`、`SiliconeMoldingColorant`、`SiliconeMoldingColorProfile`、`SiliconeMoldingProperties` を従来どおり取得できる互換ファサードにしなければならない（MUST）。
+5. `ui/properties.py` は `SiliconeCastingMixturePart`、`SiliconeCastingColorant`、`SiliconeCastingColorProfile`、`SiliconeCastingProperties` を従来どおり取得できる互換ファサードにしなければならない（MUST）。
 6. private モジュール間の依存は mixture/color から scene aggregation へ逆流してはならない（MUST）。scene aggregation だけが子 PropertyGroup 型を参照する。
 
 ### 3.4 パネルの分割
@@ -114,7 +114,7 @@
 ### 既存公開インターフェース
 
 - 新しい公開 API は追加しない。
-- `silicone_molding.operators` と `silicone_molding.ui` の `__all__` は要素と意味を維持する。
+- `silicone_casting.operators` と `silicone_casting.ui` の `__all__` は要素と意味を維持する。
 - ルート登録対象のクラスオブジェクト、登録順、解除順を維持する。
 - `ui.properties`、`ui.panel`、`operators.color_simulator` の既存 import 経路は維持する。
 - Blender の operator return、`poll`、`execute`、`invoke` の結果および report の種類・条件を維持する。
@@ -130,7 +130,7 @@
 
 ## 06. データモデル
 
-- `Scene.silicone_molding` 配下の全 RNA プロパティ名、RNA 型、単位、既定値、最小・最大値、enum item、保存可否、更新コールバックの観測可能な結果を維持する（MUST）。
+- `Scene.silicone_casting` 配下の全 RNA プロパティ名、RNA 型、単位、既定値、最小・最大値、enum item、保存可否、更新コールバックの観測可能な結果を維持する（MUST）。
 - mixture part、color profile、colorant の PropertyGroup クラスと入れ子関係を維持する（MUST）。
 - Blender 単位、mm 入力、mL 表示、色空間、滴/mL 校正の意味は変更しない（MUST）。
 - `.blend` に保存済みの値を移行する処理は不要である。RNA 名も型も変えないため、データ移行は該当なし。
@@ -187,7 +187,7 @@
 - [ ] pyright strict が 0 errors である。
 - [ ] `just run` が成功する。
 - [ ] `just blender-test` が成功し、Extension の build、install、register、主要 operator の実行を確認できる。
-- [ ] `src/silicone_molding/core/`、`tests/silicone_molding/core/`、`tests/fixtures/` に差分がない。
+- [ ] `src/silicone_casting/core/`、`tests/silicone_casting/core/`、`tests/fixtures/` に差分がない。
 - [ ] golden mesh の再生成がない。
 
 ## 10. 実装計画と担当分割
@@ -196,12 +196,12 @@
 
 | 領域 | 実装所有ファイル | テスト所有ファイル | 依存・統合条件 |
 | --- | --- | --- | --- |
-| A: operator 基盤 | `operators/_operator.py`、`solidify.py`、`boolean_modifier.py`、`copy_value.py`、`export_stl.py`、`inherit_shape.py`、`measure_volume.py`、`mixture_parts.py`、`separate_loose_parts.py` | `tests/silicone_molding/operators/` 配下の `test_color_simulator.py` 以外 | D は合意済みの `_operator.py` インターフェースだけを利用する。A は color 系ファイルを編集しない。 |
-| B: properties | `ui/properties.py`、`ui/_mixture_properties.py`、`ui/_color_properties.py`、`ui/_scene_properties.py` | `tests/silicone_molding/test_register.py` および必要な新規 `tests/silicone_molding/ui/test_properties.py` | C は従来の `ui.properties` 経路を利用できる。B は panel と operator を編集しない。 |
-| C: panels | `ui/panel.py`、`ui/_mixture_panel.py`、`ui/_color_panel.py`、`ui/_sidebar_panels.py` | `tests/silicone_molding/ui/test_panel.py` | B/D のファサードだけを利用し、それらの所有ファイルを編集しない。 |
-| D: color operator | `operators/color_simulator.py`、`operators/_color_adapter.py`、`operators/_color_material.py`、`operators/_color_operators.py` | `tests/silicone_molding/operators/test_color_simulator.py` | A の `_operator.py` を利用する。properties/panel は編集しない。 |
+| A: operator 基盤 | `operators/_operator.py`、`solidify.py`、`boolean_modifier.py`、`copy_value.py`、`export_stl.py`、`inherit_shape.py`、`measure_volume.py`、`mixture_parts.py`、`separate_loose_parts.py` | `tests/silicone_casting/operators/` 配下の `test_color_simulator.py` 以外 | D は合意済みの `_operator.py` インターフェースだけを利用する。A は color 系ファイルを編集しない。 |
+| B: properties | `ui/properties.py`、`ui/_mixture_properties.py`、`ui/_color_properties.py`、`ui/_scene_properties.py` | `tests/silicone_casting/test_register.py` および必要な新規 `tests/silicone_casting/ui/test_properties.py` | C は従来の `ui.properties` 経路を利用できる。B は panel と operator を編集しない。 |
+| C: panels | `ui/panel.py`、`ui/_mixture_panel.py`、`ui/_color_panel.py`、`ui/_sidebar_panels.py` | `tests/silicone_casting/ui/test_panel.py` | B/D のファサードだけを利用し、それらの所有ファイルを編集しない。 |
+| D: color operator | `operators/color_simulator.py`、`operators/_color_adapter.py`、`operators/_color_material.py`、`operators/_color_operators.py` | `tests/silicone_casting/operators/test_color_simulator.py` | A の `_operator.py` を利用する。properties/panel は編集しない。 |
 
-`src/silicone_molding/__init__.py`、`operators/__init__.py`、`ui/__init__.py` は互換ファサードによって原則変更不要とする。統合上どうしても変更が必要な場合は orchestrator だけが所有し、並列担当者は編集してはならない（MUST NOT）。
+`src/silicone_casting/__init__.py`、`operators/__init__.py`、`ui/__init__.py` は互換ファサードによって原則変更不要とする。統合上どうしても変更が必要な場合は orchestrator だけが所有し、並列担当者は編集してはならない（MUST NOT）。
 
 実装順は次のとおりとする。
 

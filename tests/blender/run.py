@@ -26,12 +26,12 @@ import addon_utils
 import bpy
 
 # Blender exposes user-repository extensions under this module path.
-ADDON_MODULE = "bl_ext.user_default.silicone_molding"
+ADDON_MODULE = "bl_ext.user_default.silicone_casting"
 
-# Mirrors silicone_molding.core.MODIFIER_NAME, which tier 1 pins as public
+# Mirrors silicone_casting.core.MODIFIER_NAME, which tier 1 pins as public
 # API. Spelled out here because the add-on is imported by Blender, not by
 # this script.
-MODIFIER_NAME = "Silicone Molding Solidify"
+MODIFIER_NAME = "Silicone Casting Solidify"
 
 CUBE_SIZE = 2.0
 THICKNESS_MM = 3.0
@@ -107,7 +107,7 @@ def check_addon_is_enabled() -> None:
     ), f"{ADDON_MODULE} was not enabled; installed add-ons: {sorted(enabled)}"
     # `dir` lists the operators Blender actually resolved; `hasattr` on a
     # `bpy.ops` namespace is always true, so it would prove nothing.
-    operators = dir(bpy.ops.silicone_molding)
+    operators = dir(bpy.ops.silicone_casting)
     for name in (
         "solidify",
         "apply_solidify",
@@ -131,12 +131,12 @@ def check_addon_is_enabled() -> None:
     ):
         assert (
             name in operators
-        ), f"operator {name} is missing; silicone_molding has {sorted(operators)}"
+        ), f"operator {name} is missing; silicone_casting has {sorted(operators)}"
 
 
 def check_scene_properties() -> None:
     """The scene must carry the add-on's settings after registration."""
-    settings = bpy.context.scene.silicone_molding
+    settings = bpy.context.scene.silicone_casting
     assert settings is not None, "scene settings are missing"
     names = set(settings.bl_rna.properties.keys())
     for name in (
@@ -164,16 +164,16 @@ def check_scene_properties() -> None:
 
 def check_mixture_part_operations() -> None:
     """The installed add-on must add, select, move, and remove rows."""
-    settings = bpy.context.scene.silicone_molding
+    settings = bpy.context.scene.silicone_casting
     settings.mixture_parts.clear()
     for name in ("A", "B", "C", "D"):
-        result = bpy.ops.silicone_molding.add_mixture_part()
+        result = bpy.ops.silicone_casting.add_mixture_part()
         assert result == {"FINISHED"}, f"add_mixture_part returned {result}"
         settings.mixture_parts[-1].part_name = name
 
-    bpy.ops.silicone_molding.select_mixture_part(index=1, mode="REPLACE")
-    bpy.ops.silicone_molding.select_mixture_part(index=3, mode="TOGGLE")
-    result = bpy.ops.silicone_molding.move_mixture_parts(direction="UP")
+    bpy.ops.silicone_casting.select_mixture_part(index=1, mode="REPLACE")
+    bpy.ops.silicone_casting.select_mixture_part(index=3, mode="TOGGLE")
+    result = bpy.ops.silicone_casting.move_mixture_parts(direction="UP")
     assert result == {"FINISHED"}, f"move_mixture_parts returned {result}"
     assert [part.part_name for part in settings.mixture_parts] == [
         "B",
@@ -182,7 +182,7 @@ def check_mixture_part_operations() -> None:
         "C",
     ]
 
-    result = bpy.ops.silicone_molding.remove_mixture_parts()
+    result = bpy.ops.silicone_casting.remove_mixture_parts()
     assert result == {"FINISHED"}, f"remove_mixture_parts returned {result}"
     assert [part.part_name for part in settings.mixture_parts] == ["A", "C"]
     assert settings.mixture_selection_anchor == -1
@@ -191,17 +191,17 @@ def check_mixture_part_operations() -> None:
 def check_named_color_profiles_update_and_apply_independently() -> None:
     """Each recipe must own one live material that can be assigned to
     meshes."""
-    settings = bpy.context.scene.silicone_molding
+    settings = bpy.context.scene.silicone_casting
     settings.color_profiles.clear()
     settings.color_profile_active_index = -1
 
-    result = bpy.ops.silicone_molding.add_color_profile()
+    result = bpy.ops.silicone_casting.add_color_profile()
     assert result == {"FINISHED"}, f"add_color_profile returned {result}"
     warm = settings.color_profiles[0]
     warm.profile_name = "Warm"
     warm.base_volume_ml = 1.0
     warm.base_color = (1.0, 0.8, 0.5)
-    result = bpy.ops.silicone_molding.add_colorant()
+    result = bpy.ops.silicone_casting.add_colorant()
     assert result == {"FINISHED"}, f"add_colorant returned {result}"
     warm.colorants[0].calibration_hue_degrees = 30.0
     warm.colorants[0].calibration_lightness_percent = 25.0
@@ -210,7 +210,7 @@ def check_named_color_profiles_update_and_apply_independently() -> None:
     assert abs(warm.colorants[0].calibration_hue_degrees - 30.0) <= TOLERANCE
     warm.colorants[0].drops = 1.0
 
-    result = bpy.ops.silicone_molding.add_color_profile()
+    result = bpy.ops.silicone_casting.add_color_profile()
     assert result == {"FINISHED"}, f"second add_color_profile returned {result}"
     cool = settings.color_profiles[1]
     cool.profile_name = "Cool"
@@ -229,7 +229,7 @@ def check_named_color_profiles_update_and_apply_independently() -> None:
     bpy.ops.mesh.primitive_cube_add(size=1.0)
     cube = bpy.context.active_object
     assert cube is not None, "primitive_cube_add did not leave an active object"
-    result = bpy.ops.silicone_molding.apply_color_material()
+    result = bpy.ops.silicone_casting.apply_color_material()
     assert result == {"FINISHED"}, f"apply_color_material returned {result}"
     assert cube.active_material == cool.preview_material
 
@@ -237,7 +237,7 @@ def check_named_color_profiles_update_and_apply_independently() -> None:
 def check_mixture_settings_survive_save_and_reload() -> None:
     """Saved calculator and color-profile inputs must survive a .blend round-
     trip."""
-    settings = bpy.context.scene.silicone_molding
+    settings = bpy.context.scene.silicone_casting
     settings.mixture_parts.clear()
     settings.mixture_use_shared_density = False
     settings.mixture_density_a_g_per_ml = 1.5
@@ -247,13 +247,13 @@ def check_mixture_settings_survive_save_and_reload() -> None:
     settings.color_profiles.clear()
     settings.color_profile_active_index = -1
 
-    bpy.ops.silicone_molding.add_color_profile()
+    bpy.ops.silicone_casting.add_color_profile()
     clear = settings.color_profiles[0]
     clear.profile_name = "Clear Yellow"
     clear.base_volume_ml = 125.0
     clear.base_color = (1.0, 0.9, 0.7)
     clear.transparency = 0.9
-    bpy.ops.silicone_molding.add_colorant()
+    bpy.ops.silicone_casting.add_colorant()
     amber = clear.colorants[0]
     amber.colorant_name = "Amber"
     amber.calibration_hue_degrees = 30.0
@@ -261,17 +261,17 @@ def check_mixture_settings_survive_save_and_reload() -> None:
     amber.calibration_drops_per_ml = 2.0
     amber.drops = 0.5
 
-    bpy.ops.silicone_molding.add_color_profile()
+    bpy.ops.silicone_casting.add_color_profile()
     opaque = settings.color_profiles[1]
     opaque.profile_name = "Opaque White"
     opaque.transparency = 0.8
-    bpy.ops.silicone_molding.add_colorant()
+    bpy.ops.silicone_casting.add_colorant()
     blue = opaque.colorants[0]
     blue.colorant_name = "Blue"
     blue.calibration_hue_degrees = 240.0
     blue.calibration_lightness_percent = 50.0
     blue.drops = 100.0
-    bpy.ops.silicone_molding.add_colorant()
+    bpy.ops.silicone_casting.add_colorant()
     white = opaque.colorants[1]
     white.colorant_name = "White"
     white.calibration_hue_degrees = 30.0
@@ -299,7 +299,7 @@ def check_mixture_settings_survive_save_and_reload() -> None:
         result = bpy.ops.wm.open_mainfile(filepath=str(path))
         assert result == {"FINISHED"}, f"open_mainfile returned {result}"
 
-        loaded = bpy.context.scene.silicone_molding
+        loaded = bpy.context.scene.silicone_casting
         assert not loaded.mixture_use_shared_density
         assert abs(loaded.mixture_density_a_g_per_ml - 1.5) <= TOLERANCE
         assert abs(loaded.mixture_density_b_g_per_ml - 1.0) <= TOLERANCE
@@ -345,7 +345,7 @@ def check_mixture_settings_survive_save_and_reload() -> None:
         assert abs(loaded_white.calibration_hue_degrees - 30.0) <= TOLERANCE
         assert abs(loaded_white.calibration_lightness_percent - 100.0) <= TOLERANCE
         shader = loaded_opaque.preview_material.node_tree.nodes[
-            "Silicone Molding Shader"
+            "Silicone Casting Shader"
         ]
         assert abs(shader.inputs["Transmission Weight"].default_value) <= TOLERANCE
         assert abs(shader.inputs["Subsurface Weight"].default_value) <= TOLERANCE
@@ -379,17 +379,17 @@ def check_solidify_then_apply_gives_a_double_walled_cube() -> None:
     cube.select_set(True)
 
     bpy.context.scene.unit_settings.scale_length = 1.0
-    settings = bpy.context.scene.silicone_molding
+    settings = bpy.context.scene.silicone_casting
     settings.solidify_thickness_mm = THICKNESS_MM
     settings.solidify_flip = False
     settings.solidify_even_thickness = True
 
-    result = bpy.ops.silicone_molding.solidify()
+    result = bpy.ops.silicone_casting.solidify()
     assert result == {"FINISHED"}, f"solidify returned {result}"
     stack = [modifier.name for modifier in cube.modifiers]
     assert MODIFIER_NAME in stack, f"{MODIFIER_NAME!r} not added; stack is {stack}"
 
-    result = bpy.ops.silicone_molding.apply_solidify()
+    result = bpy.ops.silicone_casting.apply_solidify()
     assert result == {"FINISHED"}, f"apply_solidify returned {result}"
     stack = [modifier.name for modifier in cube.modifiers]
     assert MODIFIER_NAME not in stack, f"{MODIFIER_NAME!r} survived apply; got {stack}"
@@ -428,10 +428,10 @@ def check_boolean_modifier_uses_the_requested_inputs() -> None:
     target.select_set(True)
     bpy.context.view_layer.objects.active = target
 
-    settings = bpy.context.scene.silicone_molding
+    settings = bpy.context.scene.silicone_casting
     settings.boolean_operand = operand
     settings.boolean_solver = "MANIFOLD"
-    result = bpy.ops.silicone_molding.add_boolean(operation="UNION")
+    result = bpy.ops.silicone_casting.add_boolean(operation="UNION")
 
     assert result == {"FINISHED"}, f"add_boolean returned {result}"
     boolean_modifiers = [
@@ -470,11 +470,11 @@ def check_surface_cut_is_one_integrated_modifier() -> None:
     target.select_set(True)
     bpy.context.view_layer.objects.active = target
 
-    settings = bpy.context.scene.silicone_molding
+    settings = bpy.context.scene.silicone_casting
     settings.boolean_operand = surface
     settings.boolean_solver = "FLOAT"
     settings.surface_cut_thickness_mm = 0.25
-    result = bpy.ops.silicone_molding.add_surface_cut()
+    result = bpy.ops.silicone_casting.add_surface_cut()
 
     assert result == {"FINISHED"}, f"add_surface_cut returned {result}"
     assert len(surface.modifiers) == 0
@@ -540,7 +540,7 @@ def check_loose_parts_become_separate_objects() -> None:
     solidify.thickness = 0.25
     solidify.show_viewport = False
 
-    result = bpy.ops.silicone_molding.separate_loose_parts()
+    result = bpy.ops.silicone_casting.separate_loose_parts()
 
     assert result == {"FINISHED"}, f"separate_loose_parts returned {result}"
     assert source.hide_get()
@@ -604,10 +604,10 @@ def check_measuring_a_closed_cube_stores_its_millilitres() -> None:
     cube.select_set(True)
     bpy.context.scene.unit_settings.scale_length = 1.0
 
-    result = bpy.ops.silicone_molding.measure_volume()
+    result = bpy.ops.silicone_casting.measure_volume()
     assert result == {"FINISHED"}, f"measure_volume returned {result}"
 
-    settings = bpy.context.scene.silicone_molding
+    settings = bpy.context.scene.silicone_casting
     assert settings.volume_measured, "volume_measured stayed false after a good run"
     difference = abs(settings.volume_ml - EXPECTED_VOLUME_ML)
     assert difference <= VOLUME_TOLERANCE, (
@@ -633,11 +633,11 @@ def check_an_open_mesh_clears_the_stored_measurement() -> None:
     bpy.context.scene.collection.objects.link(open_cube)
     open_cube.select_set(True)
 
-    settings = bpy.context.scene.silicone_molding
+    settings = bpy.context.scene.silicone_casting
     settings.volume_measured = True
 
     try:
-        result = bpy.ops.silicone_molding.measure_volume()
+        result = bpy.ops.silicone_casting.measure_volume()
     except RuntimeError as exc:
         cancelled, outcome = True, f"raised {exc}"
     else:
@@ -655,7 +655,7 @@ def check_copying_a_value_finishes() -> None:
     cannot be verified from a script here either -- that is the manual
     check.
     """
-    result = bpy.ops.silicone_molding.copy_value(value=DISPLAYED_VALUE)
+    result = bpy.ops.silicone_casting.copy_value(value=DISPLAYED_VALUE)
     assert result == {"FINISHED"}, f"copy_value returned {result}"
 
 
@@ -710,7 +710,7 @@ def check_export_stl_uses_the_fixed_settings() -> None:
 
     with tempfile.TemporaryDirectory() as directory:
         requested_path = Path(directory) / "ExportSelected"
-        result = bpy.ops.silicone_molding.export_stl(filepath=str(requested_path))
+        result = bpy.ops.silicone_casting.export_stl(filepath=str(requested_path))
         output_path = requested_path.with_suffix(".stl")
         assert result == {"FINISHED"}, f"export_stl returned {result}"
         assert output_path.is_file(), f"STL was not written to {output_path}"

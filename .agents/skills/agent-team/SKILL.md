@@ -12,8 +12,8 @@ description: "マルチエージェントによる 設計 → テスト/実装 �
 | エージェント              | 書く対象                                    | 触ってはいけない対象                           |
 | ------------------------- | ------------------------------------------- | ---------------------------------------------- |
 | `spec-planner`            | 仕様書 `memory/specs/*.md`（コードなし）    | コード全般                                     |
-| `spec-driven-implementer` | `src/silicone_molding/`                     | `tests/`（テストは絶対に編集しない）           |
-| `spec-test-author`        | `tests/`（`fixtures/` 含む）                | `src/silicone_molding/`                        |
+| `spec-driven-implementer` | `src/silicone_casting/`                     | `tests/`（テストは絶対に編集しない）           |
+| `spec-test-author`        | `tests/`（`fixtures/` 含む）                | `src/silicone_casting/`                        |
 | `code-quality-reviewer`   | `src/` 内部（public API は不変）            | `tests/`、`bl_idname`、プロパティ名、`__all__` |
 | `docstring-author`        | docstring・コメント・`docs/`・UI 説明文字列 | ロジック                                       |
 

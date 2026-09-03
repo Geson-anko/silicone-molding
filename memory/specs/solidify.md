@@ -47,7 +47,7 @@ ______________________________________________________________________
 | **Blender units (BU)** | Blender のシーン内座標の単位。既定では 1 BU = 1 m |
 | **`scale_length`** | `scene.unit_settings.scale_length`。1 BU が何メートルに相当するかを表す係数。既定 1.0 |
 | **Even Thickness** | Solidify の `use_even_offset`。頂点法線の平均方向に押し出す際、面の傾きぶんだけ距離を補正して、各面が指定した肉厚ぶん**平行移動**するようにする機能 |
-| **固定名モディファイア** | 本アドオンが付与する `"Silicone Molding Solidify"` という名前の Solidify モディファイア。アドオンの管理対象を名前で一意に識別するための規約 |
+| **固定名モディファイア** | 本アドオンが付与する `"Silicone Casting Solidify"` という名前の Solidify モディファイア。アドオンの管理対象を名前で一意に識別するための規約 |
 | **適用 (apply)** | モディファイアの評価結果をベースメッシュに焼き込み、モディファイアをスタックから取り除くこと |
 | **watertight** | すべての辺がちょうど 2 枚の面に共有されている状態。3D プリント可能性の必要条件 |
 | **loose part** | 辺で連結されていない独立した部分。閉じた面に肉厚を付けると外殻と内殻の 2 パーツになる |
@@ -63,10 +63,10 @@ ______________________________________________________________________
 
 **設定（プロパティ）**
 
-- FR-1. `Scene.silicone_molding` に肉厚を mm で保持するプロパティ `solidify_thickness_mm` を持たせる (MUST)。既定値 3.0、最小値 `MIN_THICKNESS_MM` (= 1e-3)、ソフト上限 50.0、表示精度は小数 2 桁
+- FR-1. `Scene.silicone_casting` に肉厚を mm で保持するプロパティ `solidify_thickness_mm` を持たせる (MUST)。既定値 3.0、最小値 `MIN_THICKNESS_MM` (= 1e-3)、ソフト上限 50.0、表示精度は小数 2 桁
 - FR-2. `solidify_thickness_mm` に `unit="LENGTH"` を設定してはならない (MUST NOT)。設定するとシーンの `unit_settings.length_unit` に従って表示単位が変わり、「常に mm で入力する」という FR-1 の要件と衝突する
-- FR-3. `Scene.silicone_molding` に方向反転フラグ `solidify_flip` を持たせる (MUST)。既定値は `False`（＝外側）
-- FR-3a. `Scene.silicone_molding` に均一化フラグ `solidify_even_thickness` を持たせる (MUST)。既存の挙動を維持するため既定値は `True`
+- FR-3. `Scene.silicone_casting` に方向反転フラグ `solidify_flip` を持たせる (MUST)。既定値は `False`（＝外側）
+- FR-3a. `Scene.silicone_casting` に均一化フラグ `solidify_even_thickness` を持たせる (MUST)。既存の挙動を維持するため既定値は `True`
 
 **単位換算**
 
@@ -76,7 +76,7 @@ ______________________________________________________________________
 **モディファイアの付与・更新**
 
 - FR-6. 選択中の **全メッシュオブジェクト** に対して処理する (MUST)。アクティブオブジェクトのみを対象にしてはならない
-- FR-7. 対象オブジェクトに固定名 `"Silicone Molding Solidify"` の Solidify モディファイアが無ければ新規追加し、あれば設定を上書きする (MUST)。同一オブジェクトに 2 つ以上作ってはならない
+- FR-7. 対象オブジェクトに固定名 `"Silicone Casting Solidify"` の Solidify モディファイアが無ければ新規追加し、あれば設定を上書きする (MUST)。同一オブジェクトに 2 つ以上作ってはならない
 - FR-8. 設定するプロパティは `thickness` / `offset` / `use_even_offset` の 3 つのみとする (MUST)。それ以外は Blender の既定値のまま（`solidify_mode = "EXTRUDE"`、`use_rim = True` 等）に委ねる
 - FR-9. `use_even_offset` は `solidify_even_thickness` と同じ値にする (MUST)。真なら角部でも指定 mm が実寸として出る
 - FR-10. `offset` は `solidify_flip` が偽なら `+1.0`（外側）、真なら `-1.0`（内側）とする (MUST)
@@ -94,7 +94,7 @@ ______________________________________________________________________
 **UI とオペレータ**
 
 - FR-18. サイドバーの Processing パネルに、3 プロパティと 2 ボタン（Solidify / Apply）を配置する (MUST)。`solidify_flip` と `solidify_even_thickness` は同じ行に配置する
-- FR-19. オペレータは自前の `bpy.props` を持たず、設定は `context.scene.silicone_molding` から読む (MUST)
+- FR-19. オペレータは自前の `bpy.props` を持たず、設定は `context.scene.silicone_casting` から読む (MUST)
 - FR-20. 適用オペレータは、対象となるモディファイアを持つオブジェクトが選択に 1 つも無いとき `poll` が偽を返し、ボタンがグレーアウトする (MUST)
 - FR-21. 両オペレータの `bl_options` は `{"REGISTER", "UNDO"}` とする (MUST)
 - FR-22. 処理できたオブジェクト数を `INFO` レベルで報告する (MUST)。個別の失敗は `WARNING` に落とし、残りの処理は続行する
@@ -104,7 +104,7 @@ ______________________________________________________________________
 - NFR-1. `core/` 配下は `bpy.ops` に依存してはならない (MUST NOT)。`core/units.py` はさらに `bpy` 自体にも依存しない
 - NFR-2. Blender 5.1 で利用可能な API のみを使う (MUST)。5.2 で追加された API は使ってはならない
 - NFR-3. `pyright` strict を通ること (MUST)。`bpy.types.Object.modifiers.new` の戻り値型は `Modifier` なので、`SolidifyModifier` として扱うには実行時の型絞り込みが必要になる
-- NFR-4. `bl_idname`、`Scene.silicone_molding` 配下のプロパティ名、パネルの `bl_idname` / `bl_category` は公開 API として扱い、決定後は互換性を意識する (MUST)
+- NFR-4. `bl_idname`、`Scene.silicone_casting` 配下のプロパティ名、パネルの `bl_idname` / `bl_category` は公開 API として扱い、決定後は互換性を意識する (MUST)
 - NFR-5. 性能要件は設けない（該当なし）。モディファイアの追加・評価はいずれも Blender 本体のコストが支配的であり、本機能が追加するオーバーヘッドは無視できる
 
 ______________________________________________________________________
@@ -126,7 +126,7 @@ ______________________________________________________________________
 
 ### 4.2 データフロー
 
-1. ユーザーがサイドバーで mm 値、向き、均一化の有無を入力 → `Scene.silicone_molding` に保存される
+1. ユーザーがサイドバーで mm 値、向き、均一化の有無を入力 → `Scene.silicone_casting` に保存される
 2. ユーザーが **Solidify** ボタンを押す → オペレータが `context.scene.unit_settings.scale_length` を読み、`mm_to_units` で BU に換算
 3. オペレータが `context.selected_objects` のうち `type == "MESH"` のものを順に走査し、各オブジェクトに `ensure_solidify` を呼ぶ
 4. ユーザーが **Apply** ボタンを押す → オペレータが `context.evaluated_depsgraph_get()` を取得し、各オブジェクトに `apply_solidify` を呼ぶ
@@ -138,13 +138,13 @@ ______________________________________________________________________
 
 | | モジュール A（core 層） | モジュール B（Blender 統合層） |
 | --- | --- | --- |
-| 実装 | `src/silicone_molding/core/units.py`<br>`src/silicone_molding/core/solidify.py`<br>`src/silicone_molding/core/__init__.py` | `src/silicone_molding/operators/solidify.py`<br>`src/silicone_molding/operators/__init__.py`<br>`src/silicone_molding/ui/properties.py`<br>`src/silicone_molding/ui/panel.py`<br>`src/silicone_molding/__init__.py` |
-| テスト | `tests/silicone_molding/core/test_units.py`<br>`tests/silicone_molding/core/test_solidify.py` | `tests/silicone_molding/operators/test_solidify.py`<br>`tests/silicone_molding/test_register.py`（追記）<br>`tests/blender/run.py`（追記） |
+| 実装 | `src/silicone_casting/core/units.py`<br>`src/silicone_casting/core/solidify.py`<br>`src/silicone_casting/core/__init__.py` | `src/silicone_casting/operators/solidify.py`<br>`src/silicone_casting/operators/__init__.py`<br>`src/silicone_casting/ui/properties.py`<br>`src/silicone_casting/ui/panel.py`<br>`src/silicone_casting/__init__.py` |
+| テスト | `tests/silicone_casting/core/test_units.py`<br>`tests/silicone_casting/core/test_solidify.py` | `tests/silicone_casting/operators/test_solidify.py`<br>`tests/silicone_casting/test_register.py`（追記）<br>`tests/blender/run.py`（追記） |
 | 依存方向 | B に依存しない | A の §5.1 / §5.2 のシグネチャにのみ依存 |
 
 - 契約は本仕様書の §5 が唯一の真実とする。A と B は互いの実装を読まずに、§5 だけを見て書ける状態でなければならない
 - B は A の完成を待たずに書き始められるが、B のテストは A がマージされるまで通らない（import 不能）。§10 の PR 分割を参照
-- `tests/silicone_molding/core/` と `tests/silicone_molding/operators/` のディレクトリは新規作成となる。両者が同じ `conftest.py` を編集しないよう、共有 fixture が必要なら **A が** `tests/conftest.py` を編集する（B は編集しない）
+- `tests/silicone_casting/core/` と `tests/silicone_casting/operators/` のディレクトリは新規作成となる。両者が同じ `conftest.py` を編集しないよう、共有 fixture が必要なら **A が** `tests/conftest.py` を編集する（B は編集しない）
 
 ______________________________________________________________________
 
@@ -171,7 +171,7 @@ ______________________________________________________________________
 
 このモジュールは `bpy` のデータ API のみを使う。`bpy.ops` は使わない (MUST NOT)。
 
-**`MODIFIER_NAME: Final = "Silicone Molding Solidify"`**
+**`MODIFIER_NAME: Final = "Silicone Casting Solidify"`**
 
 - アドオンが管理する Solidify モディファイアの名前。この文字列は既存の `.blend` に保存された内容と結び付くため、公開 API として扱う（変更するとユーザーのファイル上のモディファイアが管理対象から外れる）
 
@@ -255,29 +255,29 @@ ______________________________________________________________________
 
 **`OperatorReturn`**
 
-削除された `operators/shell.py` にあった型エイリアスを同じ形で踏襲する (MUST)。すなわち `set[Literal["RUNNING_MODAL", "CANCELLED", "FINISHED", "PASS_THROUGH", "INTERFACE"]]` を自前で綴る。理由は元のコメントどおりで、Blender の `OperatorReturnItems` がスタブにしか存在せず実行時に import できないため。原文は `git show 8ffe6e6^:src/silicone_molding/operators/shell.py` で参照できる。
+削除された `operators/shell.py` にあった型エイリアスを同じ形で踏襲する (MUST)。すなわち `set[Literal["RUNNING_MODAL", "CANCELLED", "FINISHED", "PASS_THROUGH", "INTERFACE"]]` を自前で綴る。理由は元のコメントどおりで、Blender の `OperatorReturnItems` がスタブにしか存在せず実行時に import できないため。原文は `git show 8ffe6e6^:src/silicone_casting/operators/shell.py` で参照できる。
 
-**`SILMOLD_OT_solidify`**
+**`SILCAST_OT_solidify`**
 
 | 項目 | 値 |
 | --- | --- |
-| `bl_idname` | `silicone_molding.solidify` |
+| `bl_idname` | `silicone_casting.solidify` |
 | `bl_label` | `Solidify` |
 | `bl_options` | `{"REGISTER", "UNDO"}` |
 
 - `poll`: `context.selected_objects` に `type == "MESH"` のオブジェクトが 1 つ以上あるとき真
 - `execute`
-  1. `props = context.scene.silicone_molding`
+  1. `props = context.scene.silicone_casting`
   2. `thickness = mm_to_units(props.solidify_thickness_mm, context.scene.unit_settings.scale_length)`
   3. `context.selected_objects` のうち `type == "MESH"` のものを順に走査し、各オブジェクトに `ensure_solidify(obj, thickness, flip=props.solidify_flip, even_thickness=props.solidify_even_thickness)` を呼ぶ
   4. 処理件数を `self.report({"INFO"}, ...)` で報告し `{"FINISHED"}` を返す
 - 例外処理: `ensure_solidify` は例外を送出しないため、`try` / `except` を書いてはならない (MUST NOT)。`poll` が 1 件以上のメッシュを保証するので `{"CANCELLED"}` の分岐も持たない（§11 OQ-2 を参照）
 
-**`SILMOLD_OT_apply_solidify`**
+**`SILCAST_OT_apply_solidify`**
 
 | 項目 | 値 |
 | --- | --- |
-| `bl_idname` | `silicone_molding.apply_solidify` |
+| `bl_idname` | `silicone_casting.apply_solidify` |
 | `bl_label` | `Apply` |
 | `bl_options` | `{"REGISTER", "UNDO"}` |
 
@@ -291,7 +291,7 @@ ______________________________________________________________________
 
 ### 5.5 `ui/properties.py`
 
-`SiliconeMoldingProperties` に 3 つのプロパティを追加する。
+`SiliconeCastingProperties` に 3 つのプロパティを追加する。
 
 | プロパティ名 | 型 | 引数 |
 | --- | --- | --- |
@@ -305,18 +305,18 @@ ______________________________________________________________________
 
 ### 5.6 `ui/panel.py`
 
-`SILMOLD_PT_processing.draw` に以下を配置する。
+`SILCAST_PT_processing.draw` に以下を配置する。
 
 1. `solidify_thickness_mm` のプロパティ行
 2. `solidify_flip` と `solidify_even_thickness` を同じプロパティ行
-3. `SILMOLD_OT_solidify` のボタン（アイコン `MOD_SOLIDIFY`）
-4. `SILMOLD_OT_apply_solidify` のボタン
+3. `SILCAST_OT_solidify` のボタン（アイコン `MOD_SOLIDIFY`）
+4. `SILCAST_OT_apply_solidify` のボタン
 
 3 と 4 を同一の行にまとめるか縦に並べるかは実装者の裁量とする (MAY)。
 
-### 5.7 `src/silicone_molding/__init__.py`
+### 5.7 `src/silicone_casting/__init__.py`
 
-`_CLASSES` に 2 つのオペレータを追加する。登録順は「`SiliconeMoldingProperties` → オペレータ 2 種 → `SILMOLD_PT_main`」とする (MUST)。パネルはオペレータの `bl_idname` を参照するため、パネルより前に登録されている必要がある。
+`_CLASSES` に 2 つのオペレータを追加する。登録順は「`SiliconeCastingProperties` → オペレータ 2 種 → `SILCAST_PT_main`」とする (MUST)。パネルはオペレータの `bl_idname` を参照するため、パネルより前に登録されている必要がある。
 
 ______________________________________________________________________
 
@@ -326,9 +326,9 @@ ______________________________________________________________________
 
 | 名前 | 保持場所 | 単位 | 既定 | 値域 | 検証場所 |
 | --- | --- | --- | --- | --- | --- |
-| `solidify_thickness_mm` | `Scene.silicone_molding` | mm | 3.0 | `[1e-3, ∞)`、ソフト上限 50.0 | `FloatProperty` の `min`（RNA がクランプ） |
-| `solidify_flip` | `Scene.silicone_molding` | — | `False` | `{False, True}` | 型により自明 |
-| `solidify_even_thickness` | `Scene.silicone_molding` | — | `True` | `{False, True}` | 型により自明 |
+| `solidify_thickness_mm` | `Scene.silicone_casting` | mm | 3.0 | `[1e-3, ∞)`、ソフト上限 50.0 | `FloatProperty` の `min`（RNA がクランプ） |
+| `solidify_flip` | `Scene.silicone_casting` | — | `False` | `{False, True}` | 型により自明 |
+| `solidify_even_thickness` | `Scene.silicone_casting` | — | `True` | `{False, True}` | 型により自明 |
 | `thickness`（`ensure_solidify` 引数） | 引数 | BU | — | 制約なし | 検証しない（§5.2） |
 | `scale_length` | `Scene.unit_settings` | m / BU | 1.0 | 正の実数 | Blender 本体 |
 
@@ -355,7 +355,7 @@ ______________________________________________________________________
 - **Given** 原点に 2×2×2 の立方体オブジェクトが 1 つあり、それだけが選択されている
 - **And** `scale_length` が 1.0、`solidify_thickness_mm` が 3.0、`solidify_flip` が偽、`solidify_even_thickness` が真である
 - **When** ユーザーが **Solidify** ボタンを押す
-- **Then** 立方体に `"Silicone Molding Solidify"` という名前の Solidify モディファイアが 1 つ追加される
+- **Then** 立方体に `"Silicone Casting Solidify"` という名前の Solidify モディファイアが 1 つ追加される
 - **And** その `thickness` は 0.003、`offset` は `+1.0`、`use_even_offset` は `True` である
 - **And** ビューポート上の立方体の外形は 2.006×2.006×2.006 になる（元の面が壁の内面になる）
 - **And** `{"INFO"}` で 1 件処理した旨が報告される
@@ -438,7 +438,7 @@ ______________________________________________________________________
 | 状況 | 期待される振る舞い |
 | --- | --- |
 | ユーザーが手動で付けた **別名の** Solidify がある | 無視する。`ensure_solidify` は固定名のものだけを見るため、アドオンのモディファイアが別に追加され、肉厚は二重に掛かる（ビューポート上の見た目に反映される）。適用時は別名のものが一時無効化されるため、焼き込まれるのはアドオン管理下の 1 つだけ。この結果は仕様どおりであり、警告は出さない |
-| 固定名だが SOLIDIFY 型でないモディファイアがある | `find_solidify` は `None` を返す。`ensure_solidify` は `obj.modifiers.new(MODIFIER_NAME, "SOLIDIFY")` を呼び、Blender が名前の衝突を回避して `"Silicone Molding Solidify.001"` を割り当てる。その結果 `find_solidify` は以後も `None` を返し続け、**Solidify を押すたびにモディファイアが増える**。これは実質的に到達不能な状況（ユーザーが意図的に同名を付けた場合のみ）であり、本仕様では防御しない。§11 OQ-3 を参照 |
+| 固定名だが SOLIDIFY 型でないモディファイアがある | `find_solidify` は `None` を返す。`ensure_solidify` は `obj.modifiers.new(MODIFIER_NAME, "SOLIDIFY")` を呼び、Blender が名前の衝突を回避して `"Silicone Casting Solidify.001"` を割り当てる。その結果 `find_solidify` は以後も `None` を返し続け、**Solidify を押すたびにモディファイアが増える**。これは実質的に到達不能な状況（ユーザーが意図的に同名を付けた場合のみ）であり、本仕様では防御しない。§11 OQ-3 を参照 |
 | 対象モディファイアの前後に他のモディファイアがある | 適用時、他はすべて一時無効化される。結果として「ベースメッシュ + Solidify のみ」が焼き込まれる。これは Blender が「1 番目でないモディファイアを適用した」際に出す警告と同じ意味論であり、上流モディファイアの結果は反映されない |
 | 対象モディファイアが元から `show_viewport = False` | 適用処理はそのまま進む。無効化されているのは他のモディファイアのみで、対象自身のフラグは触らない。ただし depsgraph 評価では対象も無効なので、**元のメッシュがそのまま焼き込まれ、モディファイアだけが消える**。この挙動は Blender 本体と同じ（本体も非表示モディファイアを適用すると同様に振る舞う） |
 
@@ -520,8 +520,8 @@ ______________________________________________________________________
 ### 9.5 オペレータ（tier 1、モジュール B）
 
 - [ ] AC-30. 選択が 0 個のとき、両オペレータの `poll` が偽
-- [ ] AC-31. メッシュが選択されているとき `SILMOLD_OT_solidify.poll` が真、`SILMOLD_OT_apply_solidify.poll` が偽（まだモディファイアが無いため）
-- [ ] AC-32. `bpy.ops.silicone_molding.solidify()` の実行後、`SILMOLD_OT_apply_solidify.poll` が真になる
+- [ ] AC-31. メッシュが選択されているとき `SILCAST_OT_solidify.poll` が真、`SILCAST_OT_apply_solidify.poll` が偽（まだモディファイアが無いため）
+- [ ] AC-32. `bpy.ops.silicone_casting.solidify()` の実行後、`SILCAST_OT_apply_solidify.poll` が真になる
 - [ ] AC-33. メッシュ 2 つと非メッシュ 1 つを選択して solidify を実行すると、メッシュ 2 つだけにモディファイアが付く
 - [ ] AC-34. `scale_length = 0.001` のシーンで `solidify_thickness_mm = 3.0` のまま実行すると、モディファイアの `thickness` が 3.0 になる（`scale_length = 1.0` なら 0.003）
 - [ ] AC-35. `solidify_flip = True` で実行すると `offset == -1.0` になる
@@ -533,16 +533,16 @@ ______________________________________________________________________
 
 これらは振る舞いテストではなく契約のピン留めである旨をコメントに明記する。
 
-- [ ] AC-38. `SILMOLD_OT_solidify.bl_idname == "silicone_molding.solidify"`
-- [ ] AC-39. `SILMOLD_OT_apply_solidify.bl_idname == "silicone_molding.apply_solidify"`
-- [ ] AC-40. 登録後、`Scene.silicone_molding` に `solidify_thickness_mm`、`solidify_flip`、`solidify_even_thickness` が存在する。`solidify_even_thickness` の既定値は `True`
-- [ ] AC-41. `MODIFIER_NAME == "Silicone Molding Solidify"`（既存 `.blend` との結び付きを守るため）
+- [ ] AC-38. `SILCAST_OT_solidify.bl_idname == "silicone_casting.solidify"`
+- [ ] AC-39. `SILCAST_OT_apply_solidify.bl_idname == "silicone_casting.apply_solidify"`
+- [ ] AC-40. 登録後、`Scene.silicone_casting` に `solidify_thickness_mm`、`solidify_flip`、`solidify_even_thickness` が存在する。`solidify_even_thickness` の既定値は `True`
+- [ ] AC-41. `MODIFIER_NAME == "Silicone Casting Solidify"`（既存 `.blend` との結び付きを守るため）
 
 ### 9.7 実 Blender での統合（tier 2、モジュール B、`tests/blender/run.py` に追記）
 
 `bmesh` を import せず、`mesh.vertices` / `mesh.polygons` から直接算出できる範囲に留める（tier 2 は third-party 非依存の方針）。
 
-- [ ] AC-42. `bpy.ops.silicone_molding.solidify` と `bpy.ops.silicone_molding.apply_solidify` が実 Blender 上で解決できる
+- [ ] AC-42. `bpy.ops.silicone_casting.solidify` と `bpy.ops.silicone_casting.apply_solidify` が実 Blender 上で解決できる
 - [ ] AC-43. 2×2×2 の立方体に対して solidify → apply を通すと、頂点数 16・面数 12 になる
 - [ ] AC-44. AC-43 の結果メッシュの座標の最小・最大が各軸で ±1.003 になる（絶対誤差 1e-5 以内）
 
@@ -559,8 +559,8 @@ ______________________________________________________________________
 
 | フェーズ | 内容 | 成果物 | 依存 |
 | --- | --- | --- | --- |
-| P1 | モジュール A の実装とテスト | `core/units.py`、`core/solidify.py`、`core/__init__.py`、`tests/silicone_molding/core/test_units.py`、`tests/silicone_molding/core/test_solidify.py` | なし |
-| P2 | モジュール B の実装とテスト | `operators/solidify.py`、`operators/__init__.py`、`ui/properties.py`、`ui/panel.py`、`__init__.py`、`tests/silicone_molding/operators/test_solidify.py`、`tests/silicone_molding/test_register.py` 追記 | P1 のシグネチャ（本仕様 §5）。実行時には P1 の成果物 |
+| P1 | モジュール A の実装とテスト | `core/units.py`、`core/solidify.py`、`core/__init__.py`、`tests/silicone_casting/core/test_units.py`、`tests/silicone_casting/core/test_solidify.py` | なし |
+| P2 | モジュール B の実装とテスト | `operators/solidify.py`、`operators/__init__.py`、`ui/properties.py`、`ui/panel.py`、`__init__.py`、`tests/silicone_casting/operators/test_solidify.py`、`tests/silicone_casting/test_register.py` 追記 | P1 のシグネチャ（本仕様 §5）。実行時には P1 の成果物 |
 | P3 | tier 2 の統合チェック追記 | `tests/blender/run.py` | P1・P2 |
 | P4 | ドキュメント | docstring、`CHANGELOG.md` の `## [Unreleased]` 更新 | P1〜P3 |
 
@@ -580,7 +580,7 @@ P1 と P2 は §4.3 の分担どおりファイルが排他なので **並列に
 
 ### 10.3 検証手順
 
-1. P1 完了時 → `uv run pytest tests/silicone_molding/core -v` が緑（AC-1〜AC-29）
+1. P1 完了時 → `uv run pytest tests/silicone_casting/core -v` が緑（AC-1〜AC-29）
 2. P2 完了時 → `just test` が緑（AC-30〜AC-41 を追加）
 3. P3 完了時 → `just blender-test` が緑（AC-42〜AC-44）
 4. 最終 → `just run` と `just blender-test`（AC-45・AC-46）
@@ -592,8 +592,8 @@ ______________________________________________________________________
 
 | ID | 内容 | 推奨案 | 判断者 / 期限 |
 | --- | --- | --- | --- |
-| ~~OQ-1~~ **決定済** | `SILMOLD_OT_apply_solidify.poll` にオブジェクトモード条件 (`context.mode == "OBJECT"`) を加えるか | **加える**。推奨案を採用（2026-08-14, orchestrator 判断）。両オペレータに適用する | 決定済 |
-| ~~OQ-2~~ **決定済** | `SILMOLD_OT_solidify` に「1 件も処理できなければ `{"CANCELLED"}`」の分岐を持たせるか | **持たせない**。推奨案を採用（2026-08-14, orchestrator 判断）。§5.4 の記述どおり実装する | 決定済 |
+| ~~OQ-1~~ **決定済** | `SILCAST_OT_apply_solidify.poll` にオブジェクトモード条件 (`context.mode == "OBJECT"`) を加えるか | **加える**。推奨案を採用（2026-08-14, orchestrator 判断）。両オペレータに適用する | 決定済 |
+| ~~OQ-2~~ **決定済** | `SILCAST_OT_solidify` に「1 件も処理できなければ `{"CANCELLED"}`」の分岐を持たせるか | **持たせない**。推奨案を採用（2026-08-14, orchestrator 判断）。§5.4 の記述どおり実装する | 決定済 |
 | **OQ-3** | 固定名で SOLIDIFY 型でないモディファイアが既にある場合（§8.3）、`ensure_solidify` を呼ぶたびにモディファイアが増える。防御するか | **防御しない (SHOULD NOT)**。ユーザーが意図的に同名を付けた場合にのみ起きる。仕様として §8.3 に記録するに留める | 実装者 / 実装時に本仕様どおりで進めてよい |
 | **OQ-4** | 非一様スケールされたオブジェクトに対して警告を出すか | 今回は **出さない**（N-3）。実務で問題が出た時点で再検討する。判断を保留するだけで、実装は不要 | ユーザー / 実際に使ってみてから |
 | **OQ-5** | 適用後のメッシュに対する自己交差・非多様体の検査を、どの機能の責務にするか | 型分割機能または独立した「型の検査」機能の側に置く。本仕様では扱わない | 後続機能の仕様策定時 |
