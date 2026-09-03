@@ -10,7 +10,7 @@ set dotenv-load := true
 export BLENDER := env_var_or_default("BLENDER", "blender")
 
 # Extension source root: the directory holding blender_manifest.toml.
-src_dir := "src/silicone_molding"
+src_dir := "src/silicone_casting"
 
 # Pinned to the *minimum* supported Blender API (5.1) so that 5.2-only
 # additions are caught at type-check time rather than by a user on 5.1.
@@ -58,7 +58,7 @@ build: validate
 
 # Build and install the extension into the real Blender, enabled
 install: build
-    "$BLENDER" --command extension install-file --repo user_default --enable dist/silicone_molding-$(just version).zip
+    "$BLENDER" --command extension install-file --repo user_default --enable dist/silicone_casting-$(just version).zip
 
 # Requires a real Blender install, unlike `just test`.
 [doc("Install, then run the tier-2 integration checks in a real Blender")]

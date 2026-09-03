@@ -1,0 +1,27 @@
+schema_version = "1.0.0"
+
+id = "silicone_casting"
+version = "0.1.0"
+name = "Silicone Casting"
+tagline = "Generate 3D-printable resin molds for silicone casting"
+maintainer = "Geson-anko <shimomura.yasuhiro@gop.co.jp>"
+type = "add-on"
+
+website = "https://github.com/Geson-anko/silicone-casting"
+
+tags = ["Mesh", "Modeling", "3D View"]
+
+# Blender 5.0 ships Python 3.11 while 5.1+ ships 3.13. Requiring 5.1 keeps the
+# whole toolchain on a single Python generation.
+blender_version_min = "5.1.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  "/.git/",
+  "/*.zip",
+]

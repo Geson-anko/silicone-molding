@@ -1,11 +1,11 @@
 # このプロジェクトは Blender Extension であり Python distribution ではない。
 # 配布物のメタデータ (name / version / license) は
-# `src/silicone_molding/blender_manifest.toml` が単一の真実であり、
+# `src/silicone_casting/blender_manifest.toml` が単一の真実であり、
 # この pyproject.toml は開発ツール (uv / pytest / pyright / ruff) の設定専用。
 [project]
-name = "silicone-molding-dev"
+name = "silicone-casting-dev"
 version = "0"
-description = "Dev tooling environment for the Silicone Molding Blender extension"
+description = "Dev tooling environment for the Silicone Casting Blender extension"
 requires-python = "==3.13.*"
 
 [tool.uv]

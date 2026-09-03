@@ -22,7 +22,7 @@ VolumeB = WeightB / DensityB
 
 ## 保存データ
 
-`Scene.silicone_molding` に次を保存する。
+`Scene.silicone_casting` に次を保存する。
 
 - A/B共通密度を使うか
 - A密度、B密度、A比率、B比率

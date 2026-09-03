@@ -45,7 +45,7 @@ trusted project では Codex がこの設定を読み、Blender MCP サーバー
 2. Blender: **Edit → Preferences → Add-ons → Install** で `addon.py` を選択
 3. **Interface: Blender MCP** を有効化
 
-このアドオンは開発対象の `silicone_molding` とは無関係な別物。`blender --command extension` の出力に `BlenderMCP addon registered` が混ざるのはこれが原因で、無害。
+このアドオンは開発対象の `silicone_casting` とは無関係な別物。`blender --command extension` の出力に `BlenderMCP addon registered` が混ざるのはこれが原因で、無害。
 
 ### 3. 接続
 
@@ -67,13 +67,13 @@ just dev
 
 `just dev` は Blender が終了するまでブロックするので、**Codex から実行するときは継続中のコマンドセッションとして起動する**（同期完了を待つと MCP サーバーを操作できない）。
 
-`just dev` はシーンにもウィンドウレイアウトにもユーザー設定にも触らない。素の Blender にアドオンが載っているだけの状態で立ち上がるので、パネルは **N** キーでサイドバーを開いて **Silicone Molding** タブを選ぶ。
+`just dev` はシーンにもウィンドウレイアウトにもユーザー設定にも触らない。素の Blender にアドオンが載っているだけの状態で立ち上がるので、パネルは **N** キーでサイドバーを開いて **Silicone Casting** タブを選ぶ。
 
 ### 確認の流れ
 
 1. シーンをリセットして既知の状態から始める（既存オブジェクトが残っていると原因の切り分けができない）
 2. マスターとなるメッシュを 1 つ置く
-3. サイドバーの **Silicone Molding** タブからパラメータを設定してオペレータを実行する
+3. サイドバーの **Silicone Casting** タブからパラメータを設定してオペレータを実行する
 4. 結果を **スクリーンショットで確認** する。ワイヤーフレーム表示にすると内部構造が見える
 5. 数値も取る（頂点数・寸法・体積）。目視だけだと「それらしく見えるが数値が違う」を見逃す
 

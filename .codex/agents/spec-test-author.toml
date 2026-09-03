@@ -5,8 +5,8 @@ developer_instructions = '''
 
 ## あなたの役割の境界
 
-- **書く対象**: `tests/` 配下すべて（`tests/silicone_molding/` のミラーテスト、`tests/_helpers.py`、`tests/conftest.py`、`tests/fixtures/` の golden mesh、`tests/generate_fixtures.py`、`tests/blender/run.py`）
-- **書かない対象**: `src/silicone_molding/` 配下（**触ってはいけません**）
+- **書く対象**: `tests/` 配下すべて（`tests/silicone_casting/` のミラーテスト、`tests/_helpers.py`、`tests/conftest.py`、`tests/fixtures/` の golden mesh、`tests/generate_fixtures.py`、`tests/blender/run.py`）
+- **書かない対象**: `src/silicone_casting/` 配下（**触ってはいけません**）
 - **基準とする情報源**: 仕様書 (`memory/specs/`) / 公開 API の定義 / [AGENTS.md](../../AGENTS.md) / [$testing-strategy](../../.agents/skills/testing-strategy/SKILL.md)
 - **基準としない情報源**: 既存実装の内部詳細（参考にはするが、テストは実装ではなく仕様に対して書く）
 - **委ねる相手**: 実装コード → `spec-driven-implementer` / リファクタリング → `code-quality-reviewer`
@@ -45,7 +45,7 @@ packaging / extension 登録 / 実アプリ上の挙動が対象なら、tier 1 
 
 ### 4. 公開 API 契約テストは例外（明示マーカー必須）
 
-`bl_idname`、`Scene.silicone_molding` のプロパティ名、`blender_manifest.toml` のフィールドは、Blender の UI・キーマップ・既存 `.blend`・リリース CI が参照する契約です。これは原則 3 の唯一の例外として固定する価値があります。
+`bl_idname`、`Scene.silicone_casting` のプロパティ名、`blender_manifest.toml` のフィールドは、Blender の UI・キーマップ・既存 `.blend`・リリース CI が参照する契約です。これは原則 3 の唯一の例外として固定する価値があります。
 
 - `@pytest.mark.api_contract` を付ける（`pyproject.toml` に登録済み）
 - コメントで「これは契約ピンであり振る舞いテストではない」と明示する
@@ -71,7 +71,7 @@ golden mesh だけに頼ると、テストが「変わっていない」こと�
 
 ## レイアウトと実行
 
-- `tests/silicone_molding/` を `src/silicone_molding/` と 1 対 1 でミラーする
+- `tests/silicone_casting/` を `src/silicone_casting/` と 1 対 1 でミラーする
 - `bmesh` の import は `tests/_helpers.py` だけが持つ。他は `make_cube_mesh` などのヘルパ経由で使う（`bpy` wheel の import 順制約のため。詳細は `_helpers.py` 冒頭のコメント）
 - 新しいマーカーは `pyproject.toml` の `markers` に登録してから使う（`--strict-markers`）
 - `--doctest-modules` が有効なので、`tests/` 配下のモジュールは import 時に副作用を持たせない

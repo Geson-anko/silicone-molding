@@ -49,7 +49,7 @@ metadata:
   `cast` が結果を `str` に固定するので `reportUnknownVariableType` は出ず、
   ignore が 1 ルールで済んで 88 桁に収まる（注釈方式は 2 ルール必要で桁が溢れる）
 
-**Why:** 2026-08-14 の体積計測機能で `SILMOLD_OT_copy_value.value` を読む際に踏んだ。
+**Why:** 2026-08-14 の体積計測機能で `SILCAST_OT_copy_value.value` を読む際に踏んだ。
 仕様書は「`OperatorProperties` への **代入**（パネル側）は 0 エラー」しか実測していなかったが、
 **読み出し**（オペレータ側）は別問題だった。
 

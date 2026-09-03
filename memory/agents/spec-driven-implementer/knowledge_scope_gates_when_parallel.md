@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-`just type` は `src/silicone_molding` 全体、`just test` は `tests/` 全体を対象にする。仕様が
+`just type` は `src/silicone_casting` 全体、`just test` は `tests/` 全体を対象にする。仕様が
 「モジュール A = `core/`、モジュール B = `operators/` + `ui/`」のようにファイル排他で分担されている
 並列実装では、**自分の diff が完璧でもゲートは赤くなる**（相手の in-flight なファイルが原因）。
 
@@ -17,8 +17,8 @@ metadata:
 **How to apply:**
 
 - 自分の担当分の型検査は範囲を絞って回す:
-  `uv run --isolated --with fake-bpy-module-5.1 --with pyright pyright src/silicone_molding/<自分のディレクトリ>`
-- テストも `uv run pytest tests/silicone_molding/<自分の担当> -q` に絞る
+  `uv run --isolated --with fake-bpy-module-5.1 --with pyright pyright src/silicone_casting/<自分のディレクトリ>`
+- テストも `uv run pytest tests/silicone_casting/<自分の担当> -q` に絞る
 - そのうえで `just type` / `just test` を全体で 1 回回し、**残ったエラーが全部他モジュール由来である
   ことを確認**して、ファイル名付きで報告に含める（直さない）
 - 報告前に `git status --short` を見て、自分の diff が担当ファイルだけであることを確認する。

@@ -91,7 +91,7 @@ gh pr checks <番号>                 # CI status
 gh pr checks <番号> --watch         # CI 完了まで follow
 
 # inline review コメントの取得
-gh api repos/Geson-anko/silicone-molding/pulls/<番号>/comments
+gh api repos/Geson-anko/silicone-casting/pulls/<番号>/comments
 
 gh pr review <番号> --comment --body "..."
 gh pr review <番号> --approve
@@ -100,7 +100,7 @@ gh pr review <番号> --request-changes --body "..."
 
 CI が長い場合は `gh pr checks <番号> --watch` をバックグラウンドで走らせる。`blender-test` は Blender のダウンロードを含むため初回は特に時間がかかる（キャッシュが効けば短縮される）。
 
-URL からの参照も可: `gh pr view https://github.com/Geson-anko/silicone-molding/pull/123`。
+URL からの参照も可: `gh pr view https://github.com/Geson-anko/silicone-casting/pull/123`。
 
 ______________________________________________________________________
 

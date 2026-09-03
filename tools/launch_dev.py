@@ -20,7 +20,7 @@ import addon_utils
 import bpy
 
 #: Module name of our extension once installed into the user repository.
-EXTENSION_MODULE = "bl_ext.user_default.silicone_molding"
+EXTENSION_MODULE = "bl_ext.user_default.silicone_casting"
 
 #: Module name of the BlenderMCP add-on. It is a legacy single-file add-on,
 #: so the module is just the installed file's stem -- `addon.py` by default,
@@ -41,9 +41,9 @@ def log(message: str) -> None:
 
 def check_extension() -> None:
     """Report whether the add-on is loaded, so a failed install is obvious."""
-    if hasattr(bpy.ops, "silicone_molding"):
+    if hasattr(bpy.ops, "silicone_casting"):
         log(f"extension loaded: {EXTENSION_MODULE}")
-        log("panel: 3D View sidebar (N) -> Silicone Molding")
+        log("panel: 3D View sidebar (N) -> Silicone Casting")
     else:
         log(f"WARNING: {EXTENSION_MODULE} is not loaded -- run `just install` first")
 

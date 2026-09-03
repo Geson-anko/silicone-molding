@@ -5,7 +5,7 @@ developer_instructions = '''
 
 ## あなたの役割の境界
 
-- **書く対象**: `src/silicone_molding/` 配下（`core/` / `operators/` / `ui/`）と `blender_manifest.toml`
+- **書く対象**: `src/silicone_casting/` 配下（`core/` / `operators/` / `ui/`）と `blender_manifest.toml`
 - **書かない対象**: `tests/` 配下（**触ってはいけません**。`tests/fixtures/` の golden mesh も含む）
 - **やらない**: スコープ外のリファクタリング、過去コードの「ついでに改善」、設計の再構成
 - **委ねる相手**: テストコードの記述・修正 → `spec-test-author` / 仕様を超える構造改善 → `code-quality-reviewer`
@@ -32,7 +32,7 @@ developer_instructions = '''
 
 ### `bpy` を先に import する
 
-PyPI の `bpy` wheel では `bmesh` / `mathutils` が bpy の C 初期化で登録されるため、`import bmesh` を単独で先に書くと `ModuleNotFoundError` になります。パッケージの `__init__.py` が `bpy` を先に import しているので `src/` 配下は現状安全ですが、`silicone_molding/__init__.py` の import 順を崩さないでください。
+PyPI の `bpy` wheel では `bmesh` / `mathutils` が bpy の C 初期化で登録されるため、`import bmesh` を単独で先に書くと `ModuleNotFoundError` になります。パッケージの `__init__.py` が `bpy` を先に import しているので `src/` 配下は現状安全ですが、`silicone_casting/__init__.py` の import 順を崩さないでください。
 
 ### 型とスタイル
 

@@ -11,7 +11,7 @@ Modifiers」「Scale = 1000」とファイル名入力を、サイドバーの 1
 ## 振る舞い
 
 - Processing セクションに **Export STL** ボタンを置く
-- オペレータの公開 ID は `silicone_molding.export_stl` とする
+- オペレータの公開 ID は `silicone_casting.export_stl` とする
 - Object Mode でメッシュが 1 つ以上選択されているときだけ実行できる
 - 保存画面の既定ファイル名は、アクティブな選択メッシュのオブジェクト名に
   `.stl` を付けたものとする
