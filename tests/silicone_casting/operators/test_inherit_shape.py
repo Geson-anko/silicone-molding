@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterator
 
 import bpy
 import pytest
-from _helpers import make_cube_mesh
+from _helpers import make_cube_mesh, mesh_invariants
 
 import silicone_casting
 from silicone_casting.operators import SILCAST_OT_inherit_shape
@@ -168,3 +168,103 @@ def test_inherit_shape_operator_keeps_its_idname() -> None:
     """The identifier is addressed by Blender UI, keymaps, and ``.blend``
     files."""
     assert SILCAST_OT_inherit_shape.bl_idname == "silicone_casting.inherit_shape"
+
+
+@pytest.fixture
+def source_collection(add_object: AddObject) -> Iterator[bpy.types.Collection]:
+    del add_object
+    collection = bpy.data.collections.new("Masters")
+    child = bpy.data.collections.new("Nested")
+    bpy.context.scene.collection.children.link(collection)
+    collection.children.link(child)
+    bpy.context.scene.silicone_casting.inherit_collection = collection
+    yield collection
+    bpy.context.scene.silicone_casting.inherit_collection = None
+    bpy.data.collections.remove(child)
+    bpy.data.collections.remove(collection)
+
+
+def test_collection_union_includes_nested_meshes_and_updates_live(
+    add_object: AddObject, source_collection: bpy.types.Collection
+) -> None:
+    first = add_object("First")
+    second = add_object("Second")
+    first.location = (3.0, 0.0, 0.0)
+    second.location = (4.0, 0.0, 0.0)
+    source_collection.objects.link(first)
+    source_collection.children[0].objects.link(second)
+    bpy.context.view_layer.objects.active = None
+
+    assert SILCAST_OT_inherit_shape.poll(bpy.context)
+    result = bpy.ops.silicone_casting.inherit_shape(use_collection=True)
+
+    inherited = bpy.context.active_object
+    assert result == {"FINISHED"}
+    assert inherited is not None
+    assert inherited.name == "Masters.inherit"
+    assert len(inherited.data.vertices) == 0
+    assert inherited.name not in source_collection.all_objects
+    assert tuple(inherited.users_collection) == (bpy.context.scene.collection,)
+    assert list(bpy.context.selected_objects) == [inherited]
+    modifier = inherited.modifiers[0]
+    assert modifier.type == "BOOLEAN"
+    assert modifier.operand_type == "COLLECTION"
+    assert modifier.collection == source_collection
+    assert modifier.operation == "UNION"
+    assert modifier.solver == "EXACT"
+    shape = mesh_invariants(_evaluated_mesh(inherited))
+    # Two size-2 cubes overlap by 1 x 2 x 2: 8 + 8 - 4 = 12.
+    assert shape.volume == pytest.approx(12.0)
+    assert shape.bbox_min == pytest.approx((2.0, -1.0, -1.0))
+    assert shape.bbox_max == pytest.approx((5.0, 1.0, 1.0))
+    assert shape.is_watertight
+    assert shape.loose_part_count == 1
+
+    second.location.x = 6.0
+    shape = mesh_invariants(_evaluated_mesh(inherited))
+    assert shape.volume == pytest.approx(16.0)
+    assert shape.loose_part_count == 2
+    third = add_object("Third")
+    third.location = (9.0, 0.0, 0.0)
+    source_collection.objects.link(third)
+    shape = mesh_invariants(_evaluated_mesh(inherited))
+    assert shape.volume == pytest.approx(24.0)
+    assert len(first.data.vertices) == 8
+    assert len(second.data.vertices) == 8
+
+
+@pytest.mark.parametrize("non_mesh", [False, True])
+def test_collection_without_meshes_is_rejected_without_creating_objects(
+    add_object: AddObject,
+    source_collection: bpy.types.Collection,
+    non_mesh: bool,
+) -> None:
+    if non_mesh:
+        camera = add_object("Camera", bpy.data.cameras.new("CameraData"))
+        source_collection.objects.link(camera)
+    original_objects = set(bpy.data.objects)
+    with pytest.raises(RuntimeError, match="containing meshes"):
+        bpy.ops.silicone_casting.inherit_shape(use_collection=True)
+    assert set(bpy.data.objects) == original_objects
+
+
+def test_collection_mode_without_a_collection_does_not_inherit_active_mesh(
+    add_object: AddObject,
+) -> None:
+    add_object("Master")
+    original_objects = set(bpy.data.objects)
+    with pytest.raises(RuntimeError, match="containing meshes"):
+        bpy.ops.silicone_casting.inherit_shape(use_collection=True)
+    assert set(bpy.data.objects) == original_objects
+
+
+def test_collection_with_mixed_object_types_is_rejected(
+    add_object: AddObject, source_collection: bpy.types.Collection
+) -> None:
+    source_collection.objects.link(add_object("Master"))
+    camera = add_object("Camera", bpy.data.cameras.new("CameraData"))
+    source_collection.children[0].objects.link(camera)
+    original_objects = set(bpy.data.objects)
+    with pytest.raises(RuntimeError, match="only mesh"):
+        bpy.ops.silicone_casting.inherit_shape(use_collection=True)
+    assert set(bpy.data.objects) == original_objects
