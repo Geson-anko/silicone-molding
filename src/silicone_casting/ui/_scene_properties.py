@@ -85,6 +85,12 @@ class SiliconeCastingProperties(bpy.types.PropertyGroup):
         default=True,
     )
 
+    inherit_collection: PointerProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Collection",
+        description="Collection whose meshes are inherited as a Boolean union",
+        type=bpy.types.Collection,
+    )
+
     boolean_operand: PointerProperty(  # pyright: ignore[reportInvalidTypeForm]
         name="Operand",
         description="Mesh object used by the Boolean modifier",

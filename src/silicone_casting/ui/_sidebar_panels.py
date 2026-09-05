@@ -162,7 +162,19 @@ class SILCAST_PT_processing(bpy.types.Panel):
             SILCAST_OT_add_surface_cut.bl_idname,
             icon="MOD_SOLIDIFY",
         )
-        layout.operator(SILCAST_OT_inherit_shape.bl_idname, icon="MOD_BOOLEAN")
+        object_row = layout.row()
+        object_row.enabled = (
+            context.active_object is not None and context.active_object.type == "MESH"
+        )
+        object_row.operator(SILCAST_OT_inherit_shape.bl_idname, icon="MOD_BOOLEAN")
+        layout.prop(props, "inherit_collection")
+        collection_row = layout.row()
+        collection_row.enabled = props.inherit_collection is not None
+        collection_row.operator(
+            SILCAST_OT_inherit_shape.bl_idname,
+            text="Inherit Collection Shape",
+            icon="OUTLINER_COLLECTION",
+        ).use_collection = True
         layout.operator(
             SILCAST_OT_separate_loose_parts.bl_idname,
             icon="MESH_DATA",

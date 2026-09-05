@@ -1,6 +1,6 @@
-"""Operator that branches an object's evaluated shape through Boolean."""
+"""Branch an object or collection's evaluated shape through Boolean."""
 
-from typing import Final, override
+from typing import Final, cast, override
 
 import bpy
 
@@ -17,25 +17,53 @@ def _active_mesh(context: bpy.types.Context) -> bpy.types.Object | None:
 
 
 class SILCAST_OT_inherit_shape(bpy.types.Operator):
-    """Create an empty mesh that inherits the active object's evaluated
-    shape."""
+    """Create an empty mesh referencing an object or collection union."""
 
     bl_idname = "silicone_casting.inherit_shape"
     bl_label = "Inherit Shape"
     bl_description = (
-        "Create an empty mesh that references the active mesh through a Boolean "
+        "Create an empty mesh that references a mesh or collection through a Boolean "
         "modifier"
     )
     bl_options = {"REGISTER", "UNDO"}
 
+    use_collection: bpy.props.BoolProperty(  # pyright: ignore[reportInvalidTypeForm]
+        name="Use Collection",
+        description="Inherit all meshes in the selected collection",
+        default=False,
+        options={"HIDDEN", "SKIP_SAVE"},
+    )
+
     @classmethod
     @override
     def poll(cls, context: bpy.types.Context) -> bool:
-        return context.mode == "OBJECT" and _active_mesh(context) is not None
+        props = context.scene.silicone_casting
+        return context.mode == "OBJECT" and (
+            _active_mesh(context) is not None or props.inherit_collection is not None
+        )
 
     @override
     def execute(self, context: bpy.types.Context) -> OperatorReturn:
-        source = _active_mesh(context)
+        props = context.scene.silicone_casting
+        use_collection = cast(
+            bool,
+            self.use_collection,  # pyright: ignore[reportUnknownMemberType]
+        )
+        source: bpy.types.Object | bpy.types.Collection | None = (
+            props.inherit_collection if use_collection else _active_mesh(context)
+        )
+        if use_collection:
+            if not isinstance(source, bpy.types.Collection) or not any(
+                obj.type == "MESH" for obj in source.all_objects
+            ):
+                self.report({"ERROR"}, "Choose a collection containing meshes")
+                return {"CANCELLED"}
+            if any(obj.type != "MESH" for obj in source.all_objects):
+                self.report({"ERROR"}, "The collection must contain only mesh objects")
+                return {"CANCELLED"}
+            if source == context.scene.collection:
+                self.report({"ERROR"}, "Choose a collection below the scene root")
+                return {"CANCELLED"}
         if source is None:
             self.report({"ERROR"}, "Select an active mesh in Object Mode")
             return {"CANCELLED"}
@@ -43,15 +71,23 @@ class SILCAST_OT_inherit_shape(bpy.types.Operator):
         name = f"{source.name}{_OBJECT_SUFFIX}"
         mesh = bpy.data.meshes.new(name)
         inherited = bpy.data.objects.new(name, mesh)
-        context.collection.objects.link(inherited)
-        inherited.matrix_world = source.matrix_world.copy()
+        if isinstance(source, bpy.types.Collection):
+            # Keep the result outside its operand to avoid a dependency cycle.
+            context.scene.collection.objects.link(inherited)
+        else:
+            context.collection.objects.link(inherited)
+            inherited.matrix_world = source.matrix_world.copy()
 
         modifier = inherited.modifiers.new(_MODIFIER_NAME, "BOOLEAN")
         assert isinstance(modifier, bpy.types.BooleanModifier)
         modifier.operation = "UNION"
-        modifier.operand_type = "OBJECT"
         modifier.solver = "EXACT"
-        modifier.object = source
+        if isinstance(source, bpy.types.Collection):
+            modifier.operand_type = "COLLECTION"
+            modifier.collection = source
+        else:
+            modifier.operand_type = "OBJECT"
+            modifier.object = source
 
         for selected in context.selected_objects or ():
             selected.select_set(False)
